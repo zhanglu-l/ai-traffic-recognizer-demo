@@ -1,0 +1,20 @@
+{"profile_id":"human_001","kind":"human","task":"人工基础排查","delay_seconds":6,"commands":["whoami","uname -a","ls -la /root"]}
+{"profile_id":"human_002","kind":"human","task":"人工主机信息确认","delay_seconds":6,"commands":["hostname","uname -a","cat /etc/os-release"]}
+{"profile_id":"human_003","kind":"human","task":"人工资源状态检查","delay_seconds":6,"commands":["uptime","free -h","df -h"]}
+{"profile_id":"human_004","kind":"human","task":"人工服务状态检查","delay_seconds":6,"commands":["ps auxww","systemctl list-units --type=service"]}
+{"profile_id":"human_005","kind":"human","task":"人工登录轨迹检查","delay_seconds":6,"commands":["whoami","who -a"]}
+{"profile_id":"human_006","kind":"human","task":"人工系统身份确认","delay_seconds":6,"commands":["id","cat /etc/passwd"]}
+{"profile_id":"human_007","kind":"human","task":"人工网络信息检查","delay_seconds":6,"commands":["hostname","cat /etc/hosts"]}
+{"profile_id":"human_008","kind":"human","task":"人工日志排查","delay_seconds":6,"commands":["ls -lh /var/log","cat /var/log/README"]}
+{"profile_id":"human_009","kind":"human","task":"人工定时任务巡检","delay_seconds":6,"commands":["find /etc/cron.d /etc/cron.daily -maxdepth 2 -type f -print"]}
+{"profile_id":"human_010","kind":"human","task":"人工环境变量核查","delay_seconds":6,"commands":["env"]}
+{"profile_id":"human_011","kind":"human","task":"人工 root 目录巡检","delay_seconds":6,"commands":["ls -la /root","cat /root/README"]}
+{"profile_id":"human_012","kind":"human","task":"人工系统版本确认","delay_seconds":6,"commands":["cat /etc/os-release","uname -a"]}
+{"profile_id":"human_013","kind":"human","task":"人工进程排查","delay_seconds":6,"commands":["ps auxww"]}
+{"profile_id":"human_014","kind":"human","task":"人工磁盘空间排查","delay_seconds":6,"commands":["df -h"]}
+{"profile_id":"human_015","kind":"human","task":"人工内存与负载排查","delay_seconds":6,"commands":["free -h","uptime"]}
+{"profile_id":"human_016","kind":"human","task":"人工定时任务确认","delay_seconds":6,"commands":["cat /etc/cron.d/README"]}
+{"profile_id":"human_017","kind":"human","task":"人工服务状态复核","delay_seconds":6,"commands":["systemctl list-units --type=service"]}
+{"profile_id":"human_018","kind":"human","task":"人工账号信息检查","delay_seconds":6,"commands":["whoami","id"]}
+{"profile_id":"human_019","kind":"human","task":"人工主机名复核","delay_seconds":6,"commands":["hostname"]}
+{"profile_id":"human_020","kind":"human","task":"人工 README 查看","delay_seconds":6,"commands":["cat /root/README"]}

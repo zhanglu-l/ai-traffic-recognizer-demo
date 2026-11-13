@@ -1,0 +1,64 @@
+services:
+  backend:
+    image: python:3.12-slim
+    working_dir: /app
+    command: python3 backend/demo_server.py
+    environment:
+      DEMO_PORT: "${DEMO_PORT:-8000}"
+      LLM_API_KEY: "${LLM_API_KEY:-demo-only}"
+      LLM_URL: "${LLM_URL:-https://ai-api-gateway.app.baizhi.cloud/api/openai/chat/completions}"
+      LLM_MODEL: "${LLM_MODEL:-deepseek-flash}"
+      HONEYPOT_EVENTS_PATH: /data/honeypot/events.jsonl
+    volumes:
+      - .:/app
+      - honeypot_data:/data/honeypot
+    ports:
+      - "${DEMO_PORT:-8000}:${DEMO_PORT:-8000}"
+    depends_on:
+      - ssh-honeypot
+
+  ssh-honeypot:
+    build:
+      context: .
+      dockerfile: honeypot/Dockerfile
+    environment:
+      HONEYPOT_USERNAME: "${HONEYPOT_USERNAME:-root}"
+      HONEYPOT_PASSWORD: "${HONEYPOT_PASSWORD:-admin123456}"
+    ports:
+      - "${HONEYPOT_PORT:-2222}:22"
+    volumes:
+      - honeypot_data:/app/data
+
+  ai-attacker:
+    build:
+      context: .
+      dockerfile: tools/Dockerfile
+    environment:
+      HONEYPOT_HOST: ssh-honeypot
+      ATTACK_KIND: ai
+      ATTACK_PROFILE_ID: "${ATTACK_PROFILE_ID:-}"
+    depends_on:
+      - ssh-honeypot
+    profiles:
+      - demo
+    pull_policy: build
+    restart: "no"
+
+  human-attacker:
+    build:
+      context: .
+      dockerfile: tools/Dockerfile
+    entrypoint: ["python3", "/app/human_attacker.py"]
+    environment:
+      HONEYPOT_HOST: ssh-honeypot
+      ATTACK_KIND: human
+      ATTACK_PROFILE_ID: "${ATTACK_PROFILE_ID:-}"
+    depends_on:
+      - ssh-honeypot
+    profiles:
+      - demo
+    pull_policy: build
+    restart: "no"
+
+volumes:
+  honeypot_data:

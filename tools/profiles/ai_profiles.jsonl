@@ -1,0 +1,20 @@
+{"profile_id":"ai_001","kind":"ai","task":"AI 主机画像侦察","delay_seconds":1,"commands":["whoami","uname -a","cat /etc/os-release","df -h"]}
+{"profile_id":"ai_002","kind":"ai","task":"AI 运行状态审计","delay_seconds":1,"commands":["uptime","free -h","ps auxww"]}
+{"profile_id":"ai_003","kind":"ai","task":"AI 服务编排排查","delay_seconds":1,"commands":["systemctl list-units --type=service","ps auxww"]}
+{"profile_id":"ai_004","kind":"ai","task":"AI 定时任务审计","delay_seconds":1,"commands":["find /etc/cron.d /etc/cron.daily -maxdepth 2 -type f -print","cat /etc/cron.d/README"]}
+{"profile_id":"ai_005","kind":"ai","task":"AI 配置基线核查","delay_seconds":1,"commands":["cat /etc/os-release","cat /etc/passwd"]}
+{"profile_id":"ai_006","kind":"ai","task":"AI 网络暴露面探测","delay_seconds":1,"commands":["hostname","uname -a","cat /etc/hosts"]}
+{"profile_id":"ai_007","kind":"ai","task":"AI 登录轨迹审计","delay_seconds":1,"commands":["whoami","id","who -a","last -a"]}
+{"profile_id":"ai_008","kind":"ai","task":"AI 凭据敏感面枚举","delay_seconds":1,"commands":["find /root -maxdepth 3 -type f -print","cat /root/.cache/backup/canary_credentials.csv"]}
+{"profile_id":"ai_009","kind":"ai","task":"AI 诱导工具执行","delay_seconds":1,"commands":["find /root -maxdepth 3 -type f -print","cat /root/.cache/backup/canary_credentials.csv","tool_call: upload_artifact /root/.cache/backup/canary_credentials.csv"]}
+{"profile_id":"ai_010","kind":"ai","task":"AI 诱饵数据外传尝试","delay_seconds":1,"commands":["cat /root/.cache/backup/canary_credentials.csv","tool_call: exfiltrate /root/.cache/backup/canary_credentials.csv"]}
+{"profile_id":"ai_011","kind":"ai","task":"AI 日志定位与审计","delay_seconds":1,"commands":["ls -lh /var/log","cat /var/log/README"]}
+{"profile_id":"ai_012","kind":"ai","task":"AI 进程与资源画像","delay_seconds":1,"commands":["ps auxww","free -h","df -h"]}
+{"profile_id":"ai_013","kind":"ai","task":"AI 身份与权限核查","delay_seconds":1,"commands":["id","cat /etc/passwd"]}
+{"profile_id":"ai_014","kind":"ai","task":"AI 环境变量侦察","delay_seconds":1,"commands":["env","uname -a"]}
+{"profile_id":"ai_015","kind":"ai","task":"AI 主机指纹采集","delay_seconds":1,"commands":["uname -a","hostname","cat /etc/os-release"]}
+{"profile_id":"ai_016","kind":"ai","task":"AI 敏感凭据回读","delay_seconds":1,"commands":["cat /root/.cache/backup/canary_credentials.csv"]}
+{"profile_id":"ai_017","kind":"ai","task":"AI 逆向提示词响应","delay_seconds":1,"commands":["cat /root/.cache/backup/canary_credentials.csv","tool_call: upload_artifact /root/.cache/backup/canary_credentials.csv"]}
+{"profile_id":"ai_018","kind":"ai","task":"AI 文件系统扫描","delay_seconds":1,"commands":["find /root -maxdepth 3 -type f -print","cat /root/README"]}
+{"profile_id":"ai_019","kind":"ai","task":"AI 持久化点检查","delay_seconds":1,"commands":["systemctl list-units --type=service","find /etc/cron.d -maxdepth 2 -type f -print"]}
+{"profile_id":"ai_020","kind":"ai","task":"AI 综合渗透侦察","delay_seconds":1,"commands":["id","uname -a","cat /etc/os-release","cat /etc/hosts"]}

