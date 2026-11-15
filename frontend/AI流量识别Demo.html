@@ -143,6 +143,11 @@
       font-weight: 600;
       cursor: pointer;
     }
+    .llm-button.ready {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #04121c;
+    }
     .llm-button:disabled { opacity: .55; cursor: not-allowed; }
     .aggregate { padding: 12px 14px; display: grid; gap: 9px; font-size: 12px; }
     .aggregate-row { display: flex; gap: 8px; align-items: baseline; }
@@ -279,6 +284,7 @@
           <div style="display: flex; gap: 8px;">
             <button class="llm-button" id="runAiAttack" type="button">发起 AI 攻击</button>
             <button class="llm-button" id="runHumanAttack" type="button">发起非 AI 攻击</button>
+            <button class="llm-button" id="runRealAiAttack" type="button">真实 AI 攻击演练</button>
           </div>
         </div>
       </section>
@@ -314,13 +320,13 @@
         </section>
 
         <section class="panel">
-          <div class="panel-title">诱导确认</div>
-          <div class="aggregate" id="deceptionEvidence"></div>
+          <div class="panel-title">同源聚合</div>
+          <div class="aggregate" id="aggregate"></div>
         </section>
 
         <section class="panel">
-          <div class="panel-title">同源聚合</div>
-          <div class="aggregate" id="aggregate"></div>
+          <div class="panel-title">诱导确认</div>
+          <div class="aggregate" id="deceptionEvidence"></div>
         </section>
       </div>
 
@@ -344,7 +350,7 @@
           </div>
           <div class="llm-toolbar" style="border: 0; padding: 0;">
             <div class="llm-status" id="llmStatus">等待研判</div>
-            <button class="llm-button" id="runLlm" type="button">手动研判</button>
+            <button class="llm-button" id="runLlm" type="button">LLM 研判</button>
           </div>
           <div class="result">
             <div class="verdict-summary">
@@ -820,6 +826,50 @@
       `).join("");
     }
 
+    function llmTriggerReason(scenario) {
+      const requests = scenario?.requests || [];
+      const commands = requests.map(request => String(request.body || request.uri || "").toLowerCase());
+      const deception = scenario?.deceptionEvidence || {};
+      const agentSignal = commands.some(command =>
+        ["tool_call", "function_call", "mcp", "upload_artifact", "report_context"].some(marker => command.includes(marker))
+      );
+      const idleReady = Boolean(scenario?.latestTimestamp)
+        && Date.now() - new Date(scenario.latestTimestamp).getTime() >= 10000;
+      if (requests.length <= 1) return null;
+      if (deception.fakeDataTouched && deception.toolExecutionObserved) {
+        return "研判条件：诱导确认强信号（触碰诱饵 + 执行工具）";
+      }
+      if (agentSignal) {
+        return "研判条件：出现 Agent 工具调用信号";
+      }
+      if (deception.fakeDataTouched) {
+        return "研判条件：诱饵已命中";
+      }
+      if (idleReady) {
+        return "研判条件：会话已静默 10 秒";
+      }
+      if (awaitingManualLlm) {
+        return "研判条件：演示会话采集完成，允许人工研判";
+      }
+      return null;
+    }
+
+    function llmEvidenceReady(scenario) {
+      return Boolean(llmTriggerReason(scenario));
+    }
+
+    function renderLlmAvailability(scenario) {
+      const button = document.getElementById("runLlm");
+      const reason = llmTriggerReason(scenario);
+      const ready = Boolean(reason);
+      button.disabled = !ready;
+      button.classList.toggle("ready", ready);
+      document.getElementById("llmStatus").textContent = ready
+        ? reason
+        : "暂不满足研判条件：等待诱饵命中、Agent 工具调用或会话静默";
+      return ready;
+    }
+
     function renderCountermeasure(scenario) {
       const target = document.getElementById("countermeasureEvidence");
       const countermeasure = scenario.countermeasure;
@@ -904,6 +954,7 @@
       renderFeatures(feature);
       renderAggregation(aggregation, requests, feature);
       renderDeception(currentScenarioDeception || buildDeceptionEvidence(requests));
+      renderLlmAvailability(scenario);
       renderCountermeasure(scenario);
       renderResult(null);
       document.getElementById("runLlm").disabled = true;
@@ -933,7 +984,7 @@
         });
         renderResult(autoResult.llmResponse || autoResult);
         currentCountermeasure = scenario.countermeasure || null;
-        document.getElementById("runLlm").disabled = false;
+        renderLlmAvailability(scenario);
         return;
       }
       try {
@@ -941,10 +992,11 @@
         if (token !== scenarioToken) return;
         document.getElementById("systemPrompt").textContent = prompt.prompt?.system || "--";
         document.getElementById("userPrompt").textContent = prompt.prompt?.user || "--";
-        document.getElementById("llmStatus").textContent = awaitingManualLlm
-          ? "演示攻击会话已采集完成，请点击“手动研判”"
+        const reason = llmTriggerReason(scenario);
+        document.getElementById("llmStatus").textContent = reason
+          ? `${reason} · Prompt 已生成`
           : "Prompt 已生成，等待自动研判或人工兜底";
-        document.getElementById("runLlm").disabled = false;
+        renderLlmAvailability(scenario);
       } catch (error) {
         if (token !== scenarioToken) return;
         document.getElementById("llmStatus").textContent = `Prompt 生成失败：${error.message}`;
@@ -1082,7 +1134,7 @@
       if (activeAttackKind) {
         const kindScenario = Object.values(scenarios).find(scenario => {
           const isAiScenario = scenario.label.includes("AI 诱导确认");
-          return activeAttackKind === "ai" ? isAiScenario : !isAiScenario && scenario.key !== "notReady";
+          return ["ai", "real-ai"].includes(activeAttackKind) ? isAiScenario : !isAiScenario && scenario.key !== "notReady";
         });
         if (kindScenario) activeScenarioKey = kindScenario.key;
       }
@@ -1101,7 +1153,8 @@
       const status = document.getElementById("attackStatus");
       const buttons = [
         document.getElementById("runAiAttack"),
-        document.getElementById("runHumanAttack")
+        document.getElementById("runHumanAttack"),
+        document.getElementById("runRealAiAttack")
       ];
       if (!task || task.state !== "running") {
         buttons.forEach(button => { button.disabled = false; });
@@ -1110,7 +1163,8 @@
         status.textContent = "可从页面直接触发模拟攻击流量";
         return;
       }
-      const taskLabel = task.kind === "ai" ? "AI" : "非 AI";
+      const taskLabels = { ai: "AI", human: "非 AI", "real-ai": "真实 AI" };
+      const taskLabel = taskLabels[task.kind] || "未知";
       if (task.state === "running") {
         buttons.forEach(button => { button.disabled = true; });
         status.textContent = `攻击任务执行中：${taskLabel}...`;
@@ -1123,7 +1177,7 @@
       }
       if (task.id === attackTaskId && !attackCompleted) {
         attackCompleted = true;
-        awaitingManualLlm = task.state === "completed";
+        awaitingManualLlm = task.state === "completed" && task.kind !== "real-ai";
         activeAttackKind = task.kind;
         scenariosSignature = "";
         loadScenarios();
@@ -1187,11 +1241,13 @@
       const status = document.getElementById("attackStatus");
       const buttons = [
         document.getElementById("runAiAttack"),
-        document.getElementById("runHumanAttack")
+        document.getElementById("runHumanAttack"),
+        document.getElementById("runRealAiAttack")
       ];
+      const kindLabels = { ai: "AI 攻击", human: "非 AI 攻击", "real-ai": "真实 AI 攻击演练" };
       buttons.forEach(button => { button.disabled = true; });
       status.textContent = "提交攻击任务...";
-      clearTerminal(`$ ${kind === "ai" ? "AI 攻击" : "非 AI 攻击"}任务已提交...\n`);
+      clearTerminal(`$ ${kindLabels[kind] || kind}任务已提交...\n`);
       attackTaskId = null;
       attackLogCursor = 0;
       attackCompleted = false;
@@ -1220,6 +1276,7 @@
     document.getElementById("runLlm").addEventListener("click", runLlm);
     document.getElementById("runAiAttack").addEventListener("click", () => runAttack("ai"));
     document.getElementById("runHumanAttack").addEventListener("click", () => runAttack("human"));
+    document.getElementById("runRealAiAttack").addEventListener("click", () => runAttack("real-ai"));
     document.getElementById("enableCountermeasure").addEventListener("click", enableCountermeasure);
     document.getElementById("commandChainToggle").addEventListener("click", () => {
       document.getElementById("commandChain").classList.toggle("expanded");

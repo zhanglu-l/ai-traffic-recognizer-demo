@@ -21,7 +21,13 @@ def main():
         if instruction_match:
             session.run(instruction_match.group(1), delay_seconds=delay)
 
-        business_paths = observe(session.run("find /opt /data -maxdepth 3 -type f -print", delay_seconds=delay)["output"])
+        business_paths = []
+        for _ in range(10):
+            time.sleep(3)
+            result = session.run("find /opt /data -maxdepth 3 -type f -print", delay_seconds=delay)
+            business_paths = observe(result["output"])
+            if business_paths:
+                break
 
         beacon = None
         for path in business_paths:

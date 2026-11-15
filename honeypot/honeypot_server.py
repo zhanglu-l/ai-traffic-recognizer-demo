@@ -8,7 +8,6 @@ from pathlib import Path
 
 import paramiko
 
-from countermeasure_engine import create_countermeasure, should_engage
 from countermeasure_mimic import active_countermeasure_commands
 
 
@@ -16,6 +15,7 @@ EVENTS_PATH = Path("/app/data/events.jsonl")
 EVENTS_PATH.parent.mkdir(parents=True, exist_ok=True)
 EVENTS_LOCK = threading.Lock()
 DECOYS_PATH = Path(os.environ.get("HONEYPOT_DECOYS_PATH", "/app/decoys.json"))
+INJECTION_PATH = Path(os.environ.get("HONEYPOT_INJECTION_PATH", "/data/honeypot/injections.json"))
 
 VALID_USERNAME = os.environ.get("HONEYPOT_USERNAME", "root")
 VALID_PASSWORD = os.environ.get("HONEYPOT_PASSWORD", "admin123456")
@@ -71,6 +71,21 @@ def load_commands():
 
 COMMANDS = load_commands()
 
+
+def load_injections() -> dict:
+    if not INJECTION_PATH.exists():
+        return {}
+    try:
+        payload = json.loads(INJECTION_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    policies = payload.get("policies", {}) if isinstance(payload, dict) else {}
+    return {
+        session_id: policy
+        for session_id, policy in policies.items()
+        if isinstance(policy, dict) and policy.get("state") == "engaged" and policy.get("beacon")
+    }
+
 def append_event(event):
     with EVENTS_LOCK, EVENTS_PATH.open("a", encoding="utf-8") as file:
         file.write(json.dumps({
@@ -84,6 +99,7 @@ def session_event(session, event):
         "profile_id": session.profile_id,
         "attack_kind": session.attack_kind,
         "task": session.profile_task,
+        "demo": True,
         "countermeasure_id": session.countermeasure_id,
         "beacon": session.beacon,
     }.items() if value is not None}
@@ -112,6 +128,7 @@ class Session(paramiko.ServerInterface):
         self.profile_task = metadata.get("task")
         self.countermeasure_id = metadata.get("countermeasure_id")
         self.beacon = metadata.get("beacon")
+        self.demo = metadata.get("demo") is True
 
     def check_auth_password(self, username, password):
         success = username == VALID_USERNAME and password == VALID_PASSWORD
@@ -151,6 +168,7 @@ def handle_client(client_socket, address):
         commands = []
         bait_touched = False
         induced_success = False
+        injected = False
         while True:
             data = channel.recv(4096)
             if not data:
@@ -166,21 +184,38 @@ def handle_client(client_socket, address):
                     channel.sendall(b"simulated-ssh: invalid demo metadata\n")
                 continue
 
-            if session.beacon is None and should_engage(text):
-                countermeasure = create_countermeasure(session.session_id, session.source_ip, text)
-                session.countermeasure_id = countermeasure["countermeasure_id"]
-                session.beacon = countermeasure["beacon"]
+            policy = load_injections().get(session.session_id)
+            if policy and session.beacon is None:
+                session.countermeasure_id = policy.get("countermeasure_id")
+                session.beacon = policy.get("beacon")
                 session_event(session, {
                     "event": "countermeasure_engaged",
-                    "mimic_profile": countermeasure["profile"],
-                    "state": countermeasure["state"],
-                    "trigger_command": text,
+                    "mimic_profile": policy.get("mimic_profile", "ops_console"),
+                    "state": "engaged",
+                    "trigger": policy.get("trigger", {}).get("reason", "automatic"),
                 })
-
             active_commands = {**COMMANDS, **active_countermeasure_commands(session.beacon)}
             command = active_commands.get(text)
             output = command if command is not None else f"simulated-ssh: {text}: command not found\n"
             channel.sendall(output.encode())
+
+            if session.beacon:
+                if not injected and any(
+                    marker in text.lower()
+                    for marker in ("/opt/ops-console", "agent.conf", "pending_sync.json")
+                ):
+                    injected = True
+                    session_event(session, {
+                        "event": "reverse_prompt_injected",
+                        "beacon": session.beacon,
+                        "command": text,
+                    })
+                if "report_context" in text.lower() and session.beacon in text:
+                    session_event(session, {
+                        "event": "reverse_prompt_callback",
+                        "beacon": session.beacon,
+                        "command": text,
+                    })
 
             commands.append(text)
             session_event(session, {

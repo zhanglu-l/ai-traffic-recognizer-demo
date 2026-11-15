@@ -59,6 +59,8 @@ LLM_API_KEY=<your-api-key> DEMO_PORT=8201 docker compose up --build backend ssh-
 
 访问 `http://127.0.0.1:8201`。
 
+演示口述稿见 [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)。
+
 页面只保留两个核心对照场景：「SSH 蜜罐 · AI 诱导确认」和「SSH 蜜罐 · 人工排查」。选择场景后：
 
 1. 页面每 5 秒轮询最新 SSH 蜜罐会话，规则层自动提取特征、聚合证据并显示 Prompt。
@@ -104,7 +106,7 @@ ATTACK_PROFILE_ID=human_001 docker compose -f docker-compose.yml --profile demo 
 - 会话静默超过 `AUTO_JUDGE_IDLE_SECONDS`（默认 10 秒）时研判。
 - 证据内容发生变化时重新研判；未变化时使用持久化缓存，避免重复调用。
 
-LLM 返回 `ai` 且置信度不低于 `0.7` 时，默认自动创建拟态反制。可用环境变量调整：
+LLM 返回 `ai` 且置信度不低于 `0.8` 时，默认自动创建拟态反制。可用环境变量调整：
 
 ```bash
 AUTO_LLM_JUDGE=true

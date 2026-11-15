@@ -20,6 +20,8 @@ services:
       HTTPS_PROXY: "${HTTPS_PROXY:-}"
       NO_PROXY: "${NO_PROXY:-localhost,127.0.0.1,ssh-honeypot,host.docker.internal}"
       HONEYPOT_EVENTS_PATH: /data/honeypot/events.jsonl
+      DEMO_STATE_PATH: /data/honeypot/state.json
+      DEMO_INJECTION_POLICY_PATH: /data/honeypot/injections.json
     volumes:
       - .:/app
       - honeypot_data:/data/honeypot
@@ -37,10 +39,12 @@ services:
     environment:
       HONEYPOT_USERNAME: "${HONEYPOT_USERNAME:-root}"
       HONEYPOT_PASSWORD: "${HONEYPOT_PASSWORD:-admin123456}"
+      HONEYPOT_INJECTION_PATH: /data/honeypot/injections.json
     ports:
       - "${HONEYPOT_PORT:-2222}:22"
     volumes:
       - honeypot_data:/app/data
+      - honeypot_data:/data/honeypot
 
   ai-attacker:
     build:

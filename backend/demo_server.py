@@ -11,6 +11,7 @@ import subprocess
 import uuid
 from urllib.parse import parse_qs, urlparse
 from datetime import datetime
+from datetime import timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -29,6 +30,9 @@ FRONTEND_DIR = LAB_DIR / "frontend"
 RAW_DIR = LAB_DIR / "samples" / "raw"
 HONEYPOT_EVENTS_PATH = Path(os.environ.get("HONEYPOT_EVENTS_PATH", str(LAB_DIR / "honeypot" / "data" / "events.jsonl")))
 STATE_PATH = Path(os.environ.get("DEMO_STATE_PATH", str(LAB_DIR / "honeypot" / "data" / "state.json")))
+INJECTION_POLICY_PATH = Path(os.environ.get(
+    "DEMO_INJECTION_POLICY_PATH", str(STATE_PATH.with_name("injections.json"))
+))
 AUTO_LLM_JUDGE = os.environ.get("AUTO_LLM_JUDGE", "true").lower() in ("1", "true", "yes")
 AUTO_COUNTERMEASURE = os.environ.get("AUTO_COUNTERMEASURE", "true").lower() in ("1", "true", "yes")
 AUTO_JUDGE_IDLE_SECONDS = float(os.environ.get("AUTO_JUDGE_IDLE_SECONDS", "10"))
@@ -36,6 +40,7 @@ AUTO_LLM_LOCK = threading.Lock()
 ATTACK_SCRIPTS = {
     "ai": "tools/ai_attacker.py",
     "human": "tools/human_attacker.py",
+    "real-ai": "tools/realistic_ai_attacker.py",
 }
 ATTACK_TIMEOUT_SECONDS = float(os.environ.get("ATTACK_TIMEOUT_SECONDS", "60"))
 ATTACK_LOCK = threading.Lock()
@@ -96,6 +101,10 @@ def load_state() -> dict:
 def save_state(state: dict) -> None:
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     STATE_PATH.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    INJECTION_POLICY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    INJECTION_POLICY_PATH.write_text(json.dumps({
+        "policies": state.get("injections", {})
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def enrich_scenarios(scenarios: list[dict]) -> list[dict]:
@@ -104,7 +113,10 @@ def enrich_scenarios(scenarios: list[dict]) -> list[dict]:
     llm_results = state.get("llm_results", {})
     for scenario in scenarios:
         source_key = scenario.get("sourceIp")
-        candidates = [item for item in countermeasures.values() if item.get("source_ip") == source_key]
+        candidates = [
+            item for item in countermeasures.values()
+            if item.get("session_id") == scenario.get("sessionId")
+        ]
         countermeasure = max(candidates, key=lambda item: item.get("created_at", ""), default=None)
         if scenario.get("countermeasure") is None:
             scenario["countermeasure"] = countermeasure
@@ -183,6 +195,8 @@ def auto_trigger_reason(scenario: dict) -> str | None:
         return "诱导确认命中强信号，立即研判"
     if agent_action_signal:
         return "出现 Agent 工具调用强信号，立即研判"
+    if deception.get("fakeDataTouched"):
+        return "诱饵命中后出现可疑行为，立即研判"
     if requests and latest_time == latest_time and now - latest_time >= AUTO_JUDGE_IDLE_SECONDS:
         return f"会话静默超过 {AUTO_JUDGE_IDLE_SECONDS:g} 秒，自动研判"
     return None
@@ -247,17 +261,19 @@ def automatic_llm_results(scenarios: list[dict]) -> None:
             scenario["autoLlm"] = result
             state_changed = True
             confidence = float(llm_response.get("confidence") or 0)
-            if (AUTO_COUNTERMEASURE and llm_response.get("verdict") == "ai" and confidence >= 0.7
+            if (AUTO_COUNTERMEASURE and llm_response.get("verdict") == "ai" and confidence >= 0.8
                     and not scenario.get("countermeasure")):
-                scenario["countermeasure"] = create_countermeasure(scenario, llm_response)
+                countermeasure = create_countermeasure(scenario, llm_response, state)
+                scenario["countermeasure"] = countermeasure
                 print(f"[auto-countermeasure] {key} engaged", flush=True)
         if state_changed:
             save_state(state)
 
 
-def create_countermeasure(scenario: dict, llm_response: dict) -> dict:
+def create_countermeasure(scenario: dict, llm_response: dict, state: dict | None = None) -> dict:
     source_ip = scenario.get("sourceIp", "unknown")
-    state = load_state()
+    if state is None:
+        state = load_state()
     countermeasures = state.setdefault("countermeasures", {})
     countermeasure_id = f"cm_{datetime.now().strftime('%Y%m%d')}_{secrets.token_hex(3)}"
     beacon = f"cmz_{secrets.token_hex(3)}"
@@ -266,7 +282,7 @@ def create_countermeasure(scenario: dict, llm_response: dict) -> dict:
         "countermeasure_id": countermeasure_id,
         "session_id": scenario.get("sessionId"),
         "source_ip": source_ip,
-        "created_at": datetime.now().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "trigger": {
             "verdict": llm_response.get("verdict", "ai"),
             "confidence": llm_response.get("confidence", 0),
@@ -279,6 +295,23 @@ def create_countermeasure(scenario: dict, llm_response: dict) -> dict:
         "risk_level": "high" if llm_response.get("confidence", 0) >= 0.85 else "medium",
     }
     countermeasures[countermeasure_id] = countermeasure
+    state["injections"] = {
+        **state.get("injections", {}),
+        countermeasure["session_id"]: {
+            "countermeasure_id": countermeasure_id,
+            "session_id": countermeasure["session_id"],
+            "source_ip": source_ip,
+            "beacon": beacon,
+            "mimic_profile": mimic_profile,
+            "trigger": {
+                "verdict": llm_response.get("verdict", "ai"),
+                "confidence": llm_response.get("confidence", 0),
+                "reason": llm_response.get("reason", ""),
+            },
+            "created_at": countermeasure["created_at"],
+            "state": "engaged",
+        },
+    }
     save_state(state)
     return countermeasure
 
@@ -459,7 +492,7 @@ def convert_sessions() -> list[dict]:
 
 def run_attack_kind(kind: str) -> str:
     if kind not in ATTACK_SCRIPTS:
-        raise ValueError("kind 必须是 ai 或 human")
+        raise ValueError(f"kind 必须是 {'、'.join(ATTACK_SCRIPTS)}")
     with ATTACK_LOCK:
         running = next((task for task in ATTACK_TASKS.values() if task["state"] == "running"), None)
         if running:
@@ -614,7 +647,7 @@ class Handler(BaseHTTPRequestHandler):
                 payload = json.loads(self.rfile.read(length))
                 scenario = payload.get("scenario", {})
                 llm_response = payload.get("llmResponse", {})
-                if llm_response.get("verdict") != "ai" or llm_response.get("confidence", 0) < 0.7:
+                if llm_response.get("verdict") != "ai" or llm_response.get("confidence", 0) < 0.8:
                     raise ValueError("仅高置信度 AI 会话可启用反制")
                 countermeasure = create_countermeasure(scenario, llm_response)
                 self._json({"countermeasure": countermeasure})
@@ -695,7 +728,7 @@ def judge_llm_payload(payload: dict) -> dict:
         raise ValueError(f"LLM returned non-JSON response: {raw}")
     scenario = payload.get("scenario", {})
     confidence = float(llm_response.get("confidence") or 0)
-    if isinstance(scenario, dict) and llm_response.get("verdict") == "ai" and confidence >= 0.7:
+    if isinstance(scenario, dict) and llm_response.get("verdict") == "ai" and confidence >= 0.8:
         llm_response["countermeasureAvailable"] = True
         llm_response["countermeasureScenario"] = {
             "key": scenario.get("key"),

@@ -150,5 +150,6 @@ def run_profile(profile, kind):
             "kind": kind,
             "profile_id": profile.get("profile_id"),
             "task": profile.get("task"),
+            "demo": True,
         },
     )
