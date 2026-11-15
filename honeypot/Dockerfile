@@ -6,6 +6,8 @@ WORKDIR /app
 RUN pip install --no-cache-dir paramiko==3.5.1
 
 COPY honeypot/honeypot_server.py /app/honeypot_server.py
+COPY honeypot/countermeasure_mimic.py /app/countermeasure_mimic.py
+COPY honeypot/countermeasure_engine.py /app/countermeasure_engine.py
 COPY honeypot/decoys.json /app/decoys.json
 COPY honeypot/data/ /app/data/
 

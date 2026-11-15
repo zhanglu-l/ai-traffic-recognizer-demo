@@ -1,13 +1,24 @@
 services:
   backend:
-    image: python:3.12-slim
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     working_dir: /app
     command: python3 backend/demo_server.py
+    env_file:
+      - .env
     environment:
       DEMO_PORT: "${DEMO_PORT:-8000}"
       LLM_API_KEY: "${LLM_API_KEY:-demo-only}"
       LLM_URL: "${LLM_URL:-https://ai-api-gateway.app.baizhi.cloud/api/openai/chat/completions}"
       LLM_MODEL: "${LLM_MODEL:-deepseek-flash}"
+      AUTO_LLM_JUDGE: "${AUTO_LLM_JUDGE:-true}"
+      AUTO_COUNTERMEASURE: "${AUTO_COUNTERMEASURE:-true}"
+      AUTO_JUDGE_IDLE_SECONDS: "${AUTO_JUDGE_IDLE_SECONDS:-10}"
+      ATTACK_TIMEOUT_SECONDS: "${ATTACK_TIMEOUT_SECONDS:-60}"
+      HTTP_PROXY: "${HTTP_PROXY:-}"
+      HTTPS_PROXY: "${HTTPS_PROXY:-}"
+      NO_PROXY: "${NO_PROXY:-localhost,127.0.0.1,ssh-honeypot,host.docker.internal}"
       HONEYPOT_EVENTS_PATH: /data/honeypot/events.jsonl
     volumes:
       - .:/app
@@ -16,6 +27,8 @@ services:
       - "${DEMO_PORT:-8000}:${DEMO_PORT:-8000}"
     depends_on:
       - ssh-honeypot
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   ssh-honeypot:
     build:
@@ -53,6 +66,36 @@ services:
       HONEYPOT_HOST: ssh-honeypot
       ATTACK_KIND: human
       ATTACK_PROFILE_ID: "${ATTACK_PROFILE_ID:-}"
+    depends_on:
+      - ssh-honeypot
+    profiles:
+      - demo
+    pull_policy: build
+    restart: "no"
+
+  cm-attacker:
+    build:
+      context: .
+      dockerfile: tools/Dockerfile
+    entrypoint: ["python3", "/app/countermeasure_attacker.py"]
+    environment:
+      HONEYPOT_HOST: ssh-honeypot
+      COUNTERMEASURE_ID: "${COUNTERMEASURE_ID:-}"
+      COUNTERMEASURE_BEACON: "${COUNTERMEASURE_BEACON:-}"
+    depends_on:
+      - ssh-honeypot
+    profiles:
+      - demo
+    pull_policy: build
+    restart: "no"
+
+  realistic-ai-attacker:
+    build:
+      context: .
+      dockerfile: tools/Dockerfile
+    entrypoint: ["python3", "/app/realistic_ai_attacker.py"]
+    environment:
+      HONEYPOT_HOST: ssh-honeypot
     depends_on:
       - ssh-honeypot
     profiles:

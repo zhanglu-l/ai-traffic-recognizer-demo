@@ -17,6 +17,49 @@ PROFILES_DIR = Path(__file__).resolve().parent / "profiles"
 DEMO_META_PREFIX = "__DEMO_META__ "
 
 
+class InteractiveSession:
+    def __init__(self):
+        self.client = paramiko.SSHClient()
+        self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.client.connect(
+            HOST,
+            port=PORT,
+            username=USERNAME,
+            password=PASSWORD,
+            timeout=10,
+            allow_agent=False,
+            look_for_keys=False,
+        )
+        self.channel = self.client.invoke_shell(width=160, height=48)
+        time.sleep(0.5)
+        while self.channel.recv_ready():
+            self.channel.recv(4096)
+
+    def run(self, command, delay_seconds=1):
+        self.channel.sendall((command + "\n").encode())
+        time.sleep(delay_seconds)
+        output = ""
+        deadline = time.time() + 2
+        while time.time() < deadline and not (self.channel.exit_status_ready() and not self.channel.recv_ready()):
+            if self.channel.recv_ready():
+                output += self.channel.recv(4096).decode("utf-8", "replace")
+                deadline = time.time() + 0.3
+            else:
+                time.sleep(0.05)
+        print(f"[demo] {command}\n{output}", flush=True)
+        return {"command": command, "output": output}
+
+    def close(self):
+        self.channel.close()
+        self.client.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+
 def run_session(commands, delay_seconds=1, metadata=None):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -61,6 +104,10 @@ def run_session(commands, delay_seconds=1, metadata=None):
         return outputs
     finally:
         client.close()
+
+
+def run_observed_session(commands, delay_seconds=1, metadata=None):
+    return run_session(commands, delay_seconds=delay_seconds, metadata=metadata)
 
 
 def load_profiles(kind):

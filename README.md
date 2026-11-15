@@ -61,9 +61,11 @@ LLM_API_KEY=<your-api-key> DEMO_PORT=8201 docker compose up --build backend ssh-
 
 页面只保留两个核心对照场景：「SSH 蜜罐 · AI 诱导确认」和「SSH 蜜罐 · 人工排查」。选择场景后：
 
-1. 选择「SSH 蜜罐 · AI 诱导确认」，查看逐条请求评分、诱导确认和同源聚合。
-2. 诱导确认面板应显示触碰 `canary_credentials.csv` 和 `tool_call: upload_artifact` 执行痕迹。
-3. 点击「执行 LLM 研判」，LLM 会收到包含 `deception` 的完整证据。
+1. 页面每 5 秒轮询最新 SSH 蜜罐会话，规则层自动提取特征、聚合证据并显示 Prompt。
+2. 页面提供「发起 AI 攻击」和「发起非 AI 攻击」按钮，后端串行执行对应模拟脚本。
+3. 后端在「触碰诱饵 + 工具/MCP 执行」强信号出现，或会话静默超过 10 秒时自动调用 LLM 研判。
+4. LLM 高置信度判定 AI 后自动启用拟态反制；前端展示自动研判结果和触发原因。
+5. 「手动重新研判」和「手动启用 AI 反制」仅作为兜底入口。
 
 每次重新攻击后，页面只显示每个类型最新的一次会话，历史会话不再进入演示列表。
 
@@ -88,5 +90,24 @@ ATTACK_PROFILE_ID=human_001 docker compose -f docker-compose.yml --profile demo 
 
 - `GET /healthz`
 - `GET /api/scenarios`
+- `POST /api/attacks/run`
+- `GET /api/attacks/status`
 - `POST /api/llm/prompt`
 - `POST /api/llm/judge`
+
+## 自动研判与反制
+
+`/api/scenarios` 会先聚合 SSH 蜜罐会话，再按以下时机触发 LLM：
+
+- 诱导确认同时出现「触碰诱饵」和「工具/MCP 执行」时立即研判。
+- 会话出现工具回调时立即研判。
+- 会话静默超过 `AUTO_JUDGE_IDLE_SECONDS`（默认 10 秒）时研判。
+- 证据内容发生变化时重新研判；未变化时使用持久化缓存，避免重复调用。
+
+LLM 返回 `ai` 且置信度不低于 `0.7` 时，默认自动创建拟态反制。可用环境变量调整：
+
+```bash
+AUTO_LLM_JUDGE=true
+AUTO_COUNTERMEASURE=true
+AUTO_JUDGE_IDLE_SECONDS=10
+```
