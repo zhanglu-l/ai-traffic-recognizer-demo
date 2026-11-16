@@ -73,7 +73,7 @@ LLM_API_KEY=<your-api-key> DEMO_PORT=8201 docker compose up --build backend ssh-
 
 ### 攻击会话模板
 
-`ai-attacker` 和 `human-attacker` 分别会从 `tools/profiles/ai_profiles.jsonl` 和 `tools/profiles/human_profiles.jsonl` 随机选择一个会话模板执行。每次仍会通过真实 SSH 蜜罐产生事件，LLM 研判输入依旧来自蜜罐事件链。
+页面攻击按钮固定绑定主要演示模板：未触饵侦察、读取诱饵、诱饵后执行工具、诱饵后外传，以及人工对照。每次仍会通过真实 SSH 蜜罐产生事件，LLM 研判输入依旧来自蜜罐事件链。`real-ai` 演练保留动态响应能力。
 
 攻击器容器已设置 `pull_policy: build`，`docker compose run` 时会自动使用最新代码构建；终端会打印本次命中的 `profile_id`，页面顶部也会显示模板 ID 和任务名。随机选择不保证两次一定不同，可通过下面的 `ATTACK_PROFILE_ID` 固定复现。
 

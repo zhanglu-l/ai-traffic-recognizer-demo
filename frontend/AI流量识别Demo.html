@@ -149,6 +149,15 @@
       color: #04121c;
     }
     .llm-button:disabled { opacity: .55; cursor: not-allowed; }
+    .attack-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(150px, 1fr));
+      gap: 8px;
+      min-width: min(460px, 45vw);
+    }
+    .attack-buttons button { white-space: nowrap; }
+    .beacon-status.ready { color: var(--blue); }
+    .beacon-status.done { color: var(--human); }
     .aggregate { padding: 12px 14px; display: grid; gap: 9px; font-size: 12px; }
     .aggregate-row { display: flex; gap: 8px; align-items: baseline; }
     .aggregate-row b { min-width: 84px; color: var(--muted); font-weight: 500; }
@@ -280,11 +289,13 @@
       <section class="panel">
         <div class="panel-title">攻击流量触发</div>
         <div class="llm-toolbar" style="border-bottom: 0;">
-          <div class="llm-note" id="attackStatus">可从页面直接触发模拟攻击流量</div>
-          <div style="display: flex; gap: 8px;">
-            <button class="llm-button" id="runAiAttack" type="button">发起 AI 攻击</button>
-            <button class="llm-button" id="runHumanAttack" type="button">发起非 AI 攻击</button>
-            <button class="llm-button" id="runRealAiAttack" type="button">真实 AI 攻击演练</button>
+          <div class="llm-note" id="attackStatus">选择固定演示场景，便于复现同一攻击链</div>
+          <div class="attack-buttons">
+            <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_001" title="AI Agent 常规侦察，未读取诱饵">AI · 未触饵侦察</button>
+            <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_008" title="AI Agent 读取诱饵文件，未执行工具">AI · 读取诱饵</button>
+            <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_009" title="AI Agent 读取诱饵后执行上传工具">AI · 读取诱饵并执行工具</button>
+            <button class="llm-button" type="button" data-kind="human" data-profile-id="human_001" title="人工基础排查对照流量">非 AI 对照</button>
+            <button class="llm-button" type="button" data-kind="real-ai" title="动态读取蜜罐响应，并根据反向提示词执行工具">真实 AI 演练</button>
           </div>
         </div>
       </section>
@@ -312,14 +323,6 @@
 
       <div class="evidence-grid">
         <section class="panel">
-          <div class="panel-title">攻击者特征</div>
-          <table>
-            <thead><tr><th>特征</th><th>提取结果</th><th>状态</th></tr></thead>
-            <tbody id="featureRows"></tbody>
-          </table>
-        </section>
-
-        <section class="panel">
           <div class="panel-title">同源聚合</div>
           <div class="aggregate" id="aggregate"></div>
         </section>
@@ -330,13 +333,21 @@
         </section>
       </div>
 
-      <section class="panel" hidden>
-        <div class="panel-title">溯源反制</div>
+      <section class="panel">
+        <div class="panel-title">溯源反制 · 反向提示词注入</div>
         <div class="llm-toolbar" style="border-bottom: 0;">
           <div class="llm-note">LLM 高置信判定 AI 后启用</div>
           <button class="llm-button" id="enableCountermeasure" type="button" disabled>启用反制</button>
         </div>
         <div class="aggregate" id="countermeasureEvidence"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">Beacon 回调验证</div>
+        <div class="llm-toolbar" style="border-bottom: 0;">
+          <div class="llm-note" id="beaconStatus">先启用反制，再执行回调验证</div>
+          <button class="llm-button" id="runBeaconCallback" type="button" disabled>执行反向提示词反制验证</button>
+        </div>
       </section>
 
       <section class="panel">
@@ -595,16 +606,6 @@
       MIXED: "节奏混合",
       NONE: "未命中"
     };
-
-    function renderFeatures(feature) {
-      document.getElementById("featureRows").innerHTML = feature.features.map(({ name, value, status, detail }) => `
-        <tr>
-          <td>${name}</td>
-          <td>${escapeHtml(detail ? `${value}（${detail}）` : value)}</td>
-          <td>${escapeHtml(featureStatusLabels[status] || status)}</td>
-        </tr>
-      `).join("");
-    }
 
     function inferAttackAction(request) {
       const value = `${request.method} ${request.uri} ${request.body || ""}`.toLowerCase();
@@ -899,6 +900,19 @@
       `).join("") + `
         <div class="aggregate-row"><b>验证命令</b><span>${escapeHtml(command)}</span></div>
       `;
+      const beaconButton = document.getElementById("runBeaconCallback");
+      const beaconStatus = document.getElementById("beaconStatus");
+      if (beaconButton) {
+        beaconButton.disabled = false;
+        beaconButton.dataset.countermeasureId = countermeasure.countermeasure_id;
+        beaconButton.dataset.beacon = countermeasure.canary_token;
+      }
+      if (beaconStatus) {
+        beaconStatus.className = scenario.mimicToolCallback ? "llm-note beacon-status done" : "llm-note beacon-status ready";
+        beaconStatus.textContent = scenario.mimicToolCallback
+          ? `Beacon ${countermeasure.canary_token} 已回调闭环`
+          : `Beacon ${countermeasure.canary_token} 已下发，等待回调验证`;
+      }
     }
 
     function renderLlmLoading() {
@@ -951,7 +965,6 @@
       const aggregation = aggregate(requests, feature, scenario.client);
       aggregation.sourceIp = scenario.sourceIp;
       renderAttackSteps(requests, feature);
-      renderFeatures(feature);
       renderAggregation(aggregation, requests, feature);
       renderDeception(currentScenarioDeception || buildDeceptionEvidence(requests));
       renderLlmAvailability(scenario);
@@ -1074,6 +1087,36 @@
       }
     }
 
+    async function runBeaconCallback() {
+      const button = document.getElementById("runBeaconCallback");
+      const status = document.getElementById("beaconStatus");
+      const countermeasureId = button.dataset.countermeasureId || "";
+      const beacon = button.dataset.beacon || "";
+      if (!countermeasureId || !beacon) {
+        status.textContent = "反制策略未启用，无法执行 Beacon 回调";
+        return;
+      }
+      button.disabled = true;
+      status.textContent = "反向提示词反制验证执行中...";
+      try {
+        const response = await fetch("/api/attacks/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "countermeasure", countermeasureId, beacon })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+        attackTaskId = result.taskId || null;
+        attackLogCursor = 0;
+        attackCompleted = false;
+        activeAttackKind = "countermeasure";
+        status.textContent = "反向提示词反制验证执行中...";
+      } catch (error) {
+        status.textContent = `反制验证提交失败：${error.message}`;
+        button.disabled = false;
+      }
+    }
+
     let activeScenarioKey = null;
     let activeAttackKind = null;
     let pollingScenarios = false;
@@ -1085,6 +1128,12 @@
     let awaitingManualLlm = false;
     let llmJudging = false;
     let scenariosSignature = "";
+    let scenarioPollingTimer = null;
+
+    function startScenarioPolling(interval) {
+      if (scenarioPollingTimer) clearInterval(scenarioPollingTimer);
+      scenarioPollingTimer = setInterval(loadScenarios, interval);
+    }
 
     async function loadScenarios() {
       if (llmJudging) return;
@@ -1134,7 +1183,9 @@
       if (activeAttackKind) {
         const kindScenario = Object.values(scenarios).find(scenario => {
           const isAiScenario = scenario.label.includes("AI 诱导确认");
-          return ["ai", "real-ai"].includes(activeAttackKind) ? isAiScenario : !isAiScenario && scenario.key !== "notReady";
+          return ["ai", "real-ai", "countermeasure"].includes(activeAttackKind)
+            ? isAiScenario
+            : !isAiScenario && scenario.key !== "notReady";
         });
         if (kindScenario) activeScenarioKey = kindScenario.key;
       }
@@ -1151,22 +1202,21 @@
 
     function renderAttackTask(task) {
       const status = document.getElementById("attackStatus");
-      const buttons = [
-        document.getElementById("runAiAttack"),
-        document.getElementById("runHumanAttack"),
-        document.getElementById("runRealAiAttack")
-      ];
+      const buttons = [...document.querySelectorAll(".attack-buttons button")];
       if (!task || task.state !== "running") {
         buttons.forEach(button => { button.disabled = false; });
+        const beaconButton = document.getElementById("runBeaconCallback");
+        if (beaconButton && beaconButton.dataset.countermeasureId) beaconButton.disabled = false;
       }
       if (!task) {
         status.textContent = "可从页面直接触发模拟攻击流量";
         return;
       }
-      const taskLabels = { ai: "AI", human: "非 AI", "real-ai": "真实 AI" };
+      const taskLabels = { ai: "AI", human: "非 AI", "real-ai": "真实 AI", countermeasure: "反制验证" };
       const taskLabel = taskLabels[task.kind] || "未知";
       if (task.state === "running") {
         buttons.forEach(button => { button.disabled = true; });
+        startScenarioPolling(1000);
         status.textContent = `攻击任务执行中：${taskLabel}...`;
         return;
       }
@@ -1179,6 +1229,8 @@
         attackCompleted = true;
         awaitingManualLlm = task.state === "completed" && task.kind !== "real-ai";
         activeAttackKind = task.kind;
+        const beaconButton = document.getElementById("runBeaconCallback");
+        if (beaconButton && beaconButton.dataset.countermeasureId) beaconButton.disabled = false;
         scenariosSignature = "";
         loadScenarios();
       }
@@ -1237,14 +1289,10 @@
       }
     }
 
-    async function runAttack(kind) {
+    async function runAttack(kind, profileId = "") {
       const status = document.getElementById("attackStatus");
-      const buttons = [
-        document.getElementById("runAiAttack"),
-        document.getElementById("runHumanAttack"),
-        document.getElementById("runRealAiAttack")
-      ];
-      const kindLabels = { ai: "AI 攻击", human: "非 AI 攻击", "real-ai": "真实 AI 攻击演练" };
+      const buttons = [...document.querySelectorAll(".attack-buttons button")];
+      const kindLabels = { ai: "AI 攻击", human: "非 AI 攻击", "real-ai": "真实 AI 攻击演练", countermeasure: "反向提示词反制验证" };
       buttons.forEach(button => { button.disabled = true; });
       status.textContent = "提交攻击任务...";
       clearTerminal(`$ ${kindLabels[kind] || kind}任务已提交...\n`);
@@ -1257,7 +1305,7 @@
         const response = await fetch("/api/attacks/run", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ kind })
+          body: JSON.stringify({ kind, profileId })
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
@@ -1269,15 +1317,16 @@
       }
     }
 
-    setInterval(loadScenarios, 5000);
+    startScenarioPolling(5000);
     setInterval(pollAttackTask, 1000);
     setInterval(pollAttackLogs, 500);
 
     document.getElementById("runLlm").addEventListener("click", runLlm);
-    document.getElementById("runAiAttack").addEventListener("click", () => runAttack("ai"));
-    document.getElementById("runHumanAttack").addEventListener("click", () => runAttack("human"));
-    document.getElementById("runRealAiAttack").addEventListener("click", () => runAttack("real-ai"));
+    document.querySelectorAll(".attack-buttons button").forEach(button => {
+      button.addEventListener("click", () => runAttack(button.dataset.kind, button.dataset.profileId || ""));
+    });
     document.getElementById("enableCountermeasure").addEventListener("click", enableCountermeasure);
+    document.getElementById("runBeaconCallback").addEventListener("click", runBeaconCallback);
     document.getElementById("commandChainToggle").addEventListener("click", () => {
       document.getElementById("commandChain").classList.toggle("expanded");
     });

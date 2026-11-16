@@ -1,4 +1,6 @@
 import os
+import re
+import sys
 
 from attacker_common import run_session
 
@@ -8,6 +10,11 @@ def main():
     beacon = os.environ.get("COUNTERMEASURE_BEACON")
     if not countermeasure_id or not beacon:
         raise ValueError("COUNTERMEASURE_ID and COUNTERMEASURE_BEACON are required")
+    requested_profile = os.environ.get("ATTACK_PROFILE_ID")
+    if requested_profile:
+        expected = f"{countermeasure_id}:{beacon}"
+        if requested_profile != expected:
+            raise ValueError(f"Invalid countermeasure profile; expected {expected}")
 
     run_session(
         [

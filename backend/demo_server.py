@@ -3,6 +3,7 @@ import json
 import hashlib
 import math
 import os
+import re
 import secrets
 import statistics
 import threading
@@ -41,6 +42,7 @@ ATTACK_SCRIPTS = {
     "ai": "tools/ai_attacker.py",
     "human": "tools/human_attacker.py",
     "real-ai": "tools/realistic_ai_attacker.py",
+    "countermeasure": "tools/countermeasure_attacker.py",
 }
 ATTACK_TIMEOUT_SECONDS = float(os.environ.get("ATTACK_TIMEOUT_SECONDS", "60"))
 ATTACK_LOCK = threading.Lock()
@@ -370,6 +372,10 @@ def build_honeypot_scenarios() -> list[dict]:
         deception = evaluate_session(events, load_baits())
         commands = [item.get("command", "") for item in events if item.get("event") == "shell_command"]
         engaged = next((item for item in events if item.get("event") == "countermeasure_engaged"), None)
+        policy_countermeasure_id = next(
+            (item.get("countermeasure_id") for item in events if item.get("countermeasure_id")),
+            None,
+        )
         session_countermeasure = None
         if engaged:
             session_countermeasure = {
@@ -380,10 +386,10 @@ def build_honeypot_scenarios() -> list[dict]:
                 "trigger": {"source": "automatic"},
                 "created_at": engaged.get("timestamp"),
             }
-        injection = engaged and any("agent registration" in command.lower() for command in commands)
-        beacon = next((item.get("beacon") for item in events if item.get("beacon")), None) if engaged else None
-        responded = engaged and any(beacon and beacon in command for command in commands)
-        callback = engaged and any("report_context" in command.lower() for command in commands)
+        injection = any("agent registration" in command.lower() for command in commands)
+        beacon = next((item.get("beacon") for item in events if item.get("beacon")), None)
+        responded = any(beacon and beacon in command for command in commands)
+        callback = any("report_context" in command.lower() for command in commands)
         scenarios.append({
             "key": f"live_ssh_{session_id}",
             "label": f"SSH 蜜罐 · {task_name}",
@@ -490,7 +496,7 @@ def convert_sessions() -> list[dict]:
     return scenarios
 
 
-def run_attack_kind(kind: str) -> str:
+def run_attack_kind(kind: str, profile_id: str | None = None) -> str:
     if kind not in ATTACK_SCRIPTS:
         raise ValueError(f"kind 必须是 {'、'.join(ATTACK_SCRIPTS)}")
     with ATTACK_LOCK:
@@ -516,6 +522,14 @@ def run_attack_kind(kind: str) -> str:
             env = os.environ.copy()
             env.setdefault("HONEYPOT_HOST", "host.docker.internal")
             env.setdefault("HONEYPOT_PORT", "2222")
+            if profile_id:
+                env["ATTACK_PROFILE_ID"] = profile_id
+            else:
+                env.pop("ATTACK_PROFILE_ID", None)
+            if kind == "countermeasure" and profile_id:
+                countermeasure_id, beacon = profile_id.split(":", 1)
+                env["COUNTERMEASURE_ID"] = countermeasure_id
+                env["COUNTERMEASURE_BEACON"] = beacon
             process = subprocess.Popen(
                 ["python3", ATTACK_SCRIPTS[kind]],
                 cwd=LAB_DIR,
@@ -635,7 +649,14 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 payload = json.loads(self.rfile.read(length))
-                task_id = run_attack_kind(payload.get("kind", ""))
+                profile_id = str(payload.get("profileId") or "").strip()
+                if profile_id and not re.fullmatch(r"[A-Za-z0-9_-]+", profile_id):
+                    raise ValueError("profileId 只能包含字母、数字、下划线和短横线")
+                if payload.get("kind") == "countermeasure":
+                    if not payload.get("countermeasureId") or not payload.get("beacon"):
+                        raise ValueError("countermeasureId 和 beacon 不能为空")
+                    profile_id = f"{payload['countermeasureId']}:{payload['beacon']}"
+                task_id = run_attack_kind(payload.get("kind", ""), profile_id or None)
                 self._json({"taskId": task_id})
             except (json.JSONDecodeError, ValueError) as exc:
                 self._json({"error": str(exc)}, 400)
