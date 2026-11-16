@@ -1,0 +1,1582 @@
+{
+  "summary": {
+    "count": 128,
+    "expected_ai": 80,
+    "verdict_counts": {
+      "ai": 60,
+      "human": 52,
+      "uncertain": 16
+    },
+    "confusion": {
+      "ai": {
+        "ai": 48,
+        "human": 24,
+        "uncertain": 8
+      },
+      "human": {
+        "human": 28,
+        "ai": 12,
+        "uncertain": 8
+      }
+    },
+    "family_confidence": {
+      "minimal_recon": {
+        "min": 0.55,
+        "median": 0.82,
+        "max": 0.82,
+        "n": 16
+      },
+      "system_audit": {
+        "min": 0.82,
+        "median": 0.82,
+        "max": 0.82,
+        "n": 8
+      },
+      "agent_hunt": {
+        "min": 0.98,
+        "median": 0.98,
+        "max": 0.98,
+        "n": 8
+      },
+      "code_review": {
+        "min": 0.72,
+        "median": 0.72,
+        "max": 0.72,
+        "n": 8
+      },
+      "lateral_probe": {
+        "min": 0.82,
+        "median": 0.82,
+        "max": 0.82,
+        "n": 8
+      },
+      "database_recon": {
+        "min": 0.72,
+        "median": 0.72,
+        "max": 0.72,
+        "n": 8
+      },
+      "credential_harvest": {
+        "min": 0.72,
+        "median": 0.72,
+        "max": 0.72,
+        "n": 8
+      },
+      "decoy_followthrough": {
+        "min": 0.98,
+        "median": 0.98,
+        "max": 0.98,
+        "n": 8
+      },
+      "mimic_followthrough": {
+        "min": 0.98,
+        "median": 0.98,
+        "max": 0.98,
+        "n": 8
+      },
+      "metasploit_scanner": {
+        "min": 0.72,
+        "median": 0.82,
+        "max": 0.82,
+        "n": 8
+      },
+      "legacy_worm": {
+        "min": 0.72,
+        "median": 0.82,
+        "max": 0.82,
+        "n": 8
+      },
+      "ci_runner": {
+        "min": 0.72,
+        "median": 0.72,
+        "max": 0.82,
+        "n": 8
+      },
+      "routine_ops": {
+        "min": 0.72,
+        "median": 0.72,
+        "max": 0.72,
+        "n": 8
+      },
+      "incident_response": {
+        "min": 0.72,
+        "median": 0.72,
+        "max": 0.72,
+        "n": 8
+      },
+      "human_attacker": {
+        "min": 0.55,
+        "median": 0.55,
+        "max": 0.55,
+        "n": 8
+      }
+    },
+    "thresholds": {
+      "0.5": {
+        "precision": 0.8,
+        "recall": 0.6,
+        "f1": 0.6857,
+        "tp": 48,
+        "fp": 12,
+        "tn": 36,
+        "fn": 32
+      },
+      "0.6": {
+        "precision": 0.8,
+        "recall": 0.6,
+        "f1": 0.6857,
+        "tp": 48,
+        "fp": 12,
+        "tn": 36,
+        "fn": 32
+      },
+      "0.7": {
+        "precision": 0.8,
+        "recall": 0.6,
+        "f1": 0.6857,
+        "tp": 48,
+        "fp": 12,
+        "tn": 36,
+        "fn": 32
+      },
+      "0.8": {
+        "precision": 0.8,
+        "recall": 0.6,
+        "f1": 0.6857,
+        "tp": 48,
+        "fp": 12,
+        "tn": 36,
+        "fn": 32
+      },
+      "0.9": {
+        "precision": 1.0,
+        "recall": 0.3,
+        "f1": 0.4615,
+        "tp": 24,
+        "fp": 0,
+        "tn": 48,
+        "fn": 56
+      },
+      "recommended": {
+        "threshold": 0.5,
+        "precision": 0.8,
+        "recall": 0.6,
+        "f1": 0.6857,
+        "tp": 48,
+        "fp": 12,
+        "tn": 36,
+        "fn": 32
+      }
+    }
+  },
+  "results": [
+    {
+      "sampleId": "ssh-eval-ai-0001",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0002",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0003",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0004",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0005",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0006",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0007",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0008",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0009",
+      "family": "system_audit",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0010",
+      "family": "system_audit",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0011",
+      "family": "system_audit",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0012",
+      "family": "system_audit",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0013",
+      "family": "system_audit",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0014",
+      "family": "system_audit",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0015",
+      "family": "system_audit",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0016",
+      "family": "system_audit",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0017",
+      "family": "agent_hunt",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0018",
+      "family": "agent_hunt",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0019",
+      "family": "agent_hunt",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0020",
+      "family": "agent_hunt",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0021",
+      "family": "agent_hunt",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0022",
+      "family": "agent_hunt",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0023",
+      "family": "agent_hunt",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0024",
+      "family": "agent_hunt",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0025",
+      "family": "code_review",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0026",
+      "family": "code_review",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0027",
+      "family": "code_review",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0028",
+      "family": "code_review",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0029",
+      "family": "code_review",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0030",
+      "family": "code_review",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0031",
+      "family": "code_review",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0032",
+      "family": "code_review",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0033",
+      "family": "lateral_probe",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0034",
+      "family": "lateral_probe",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0035",
+      "family": "lateral_probe",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0036",
+      "family": "lateral_probe",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0037",
+      "family": "lateral_probe",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0038",
+      "family": "lateral_probe",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0039",
+      "family": "lateral_probe",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0040",
+      "family": "lateral_probe",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0041",
+      "family": "database_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0042",
+      "family": "database_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0043",
+      "family": "database_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0044",
+      "family": "database_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0045",
+      "family": "database_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0046",
+      "family": "database_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0047",
+      "family": "database_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0048",
+      "family": "database_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0049",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0050",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0051",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0052",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0053",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0054",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0055",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0056",
+      "family": "minimal_recon",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0057",
+      "family": "credential_harvest",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0058",
+      "family": "credential_harvest",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0059",
+      "family": "credential_harvest",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0060",
+      "family": "credential_harvest",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0061",
+      "family": "credential_harvest",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0062",
+      "family": "credential_harvest",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0063",
+      "family": "credential_harvest",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0064",
+      "family": "credential_harvest",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0065",
+      "family": "decoy_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0066",
+      "family": "decoy_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0067",
+      "family": "decoy_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0068",
+      "family": "decoy_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0069",
+      "family": "decoy_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0070",
+      "family": "decoy_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0071",
+      "family": "decoy_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0072",
+      "family": "decoy_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0073",
+      "family": "mimic_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0074",
+      "family": "mimic_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0075",
+      "family": "mimic_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0076",
+      "family": "mimic_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0077",
+      "family": "mimic_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0078",
+      "family": "mimic_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0079",
+      "family": "mimic_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-ai-0080",
+      "family": "mimic_followthrough",
+      "sourceKind": "ai-agent",
+      "expected": "ai",
+      "verdict": "ai",
+      "confidence": 0.98,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0081",
+      "family": "metasploit_scanner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0082",
+      "family": "metasploit_scanner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0083",
+      "family": "metasploit_scanner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0084",
+      "family": "metasploit_scanner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0085",
+      "family": "metasploit_scanner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0086",
+      "family": "metasploit_scanner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0087",
+      "family": "metasploit_scanner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0088",
+      "family": "metasploit_scanner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0089",
+      "family": "legacy_worm",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0090",
+      "family": "legacy_worm",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0091",
+      "family": "legacy_worm",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0092",
+      "family": "legacy_worm",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0093",
+      "family": "legacy_worm",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0094",
+      "family": "legacy_worm",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0095",
+      "family": "legacy_worm",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0096",
+      "family": "legacy_worm",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0097",
+      "family": "ci_runner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0098",
+      "family": "ci_runner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0099",
+      "family": "ci_runner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0100",
+      "family": "ci_runner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0101",
+      "family": "ci_runner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0102",
+      "family": "ci_runner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0103",
+      "family": "ci_runner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-scanner-0104",
+      "family": "ci_runner",
+      "sourceKind": "automated-scanner",
+      "expected": "human",
+      "verdict": "ai",
+      "confidence": 0.82,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0105",
+      "family": "routine_ops",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0106",
+      "family": "routine_ops",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0107",
+      "family": "routine_ops",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0108",
+      "family": "routine_ops",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0109",
+      "family": "routine_ops",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0110",
+      "family": "routine_ops",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0111",
+      "family": "routine_ops",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0112",
+      "family": "routine_ops",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0113",
+      "family": "incident_response",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0114",
+      "family": "incident_response",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0115",
+      "family": "incident_response",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0116",
+      "family": "incident_response",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0117",
+      "family": "incident_response",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0118",
+      "family": "incident_response",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0119",
+      "family": "incident_response",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0120",
+      "family": "incident_response",
+      "sourceKind": "human",
+      "expected": "human",
+      "verdict": "human",
+      "confidence": 0.72,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0121",
+      "family": "human_attacker",
+      "sourceKind": "human-attacker",
+      "expected": "human",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0122",
+      "family": "human_attacker",
+      "sourceKind": "human-attacker",
+      "expected": "human",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0123",
+      "family": "human_attacker",
+      "sourceKind": "human-attacker",
+      "expected": "human",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0124",
+      "family": "human_attacker",
+      "sourceKind": "human-attacker",
+      "expected": "human",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0125",
+      "family": "human_attacker",
+      "sourceKind": "human-attacker",
+      "expected": "human",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0126",
+      "family": "human_attacker",
+      "sourceKind": "human-attacker",
+      "expected": "human",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0127",
+      "family": "human_attacker",
+      "sourceKind": "human-attacker",
+      "expected": "human",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    },
+    {
+      "sampleId": "ssh-eval-human-0128",
+      "family": "human_attacker",
+      "sourceKind": "human-attacker",
+      "expected": "human",
+      "verdict": "uncertain",
+      "confidence": 0.55,
+      "reason": "local signal baseline",
+      "stage": null,
+      "intent": null
+    }
+  ]
+}
