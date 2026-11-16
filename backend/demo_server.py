@@ -30,6 +30,7 @@ LLM_MODEL = os.environ.get("LLM_MODEL", "deepseek-flash")
 FRONTEND_DIR = LAB_DIR / "frontend"
 RAW_DIR = LAB_DIR / "samples" / "raw"
 HONEYPOT_EVENTS_PATH = Path(os.environ.get("HONEYPOT_EVENTS_PATH", str(LAB_DIR / "honeypot" / "data" / "events.jsonl")))
+EVAL_SESSIONS_PATH = LAB_DIR / "samples" / "eval_sessions.jsonl"
 STATE_PATH = Path(os.environ.get("DEMO_STATE_PATH", str(LAB_DIR / "honeypot" / "data" / "state.json")))
 INJECTION_POLICY_PATH = Path(os.environ.get(
     "DEMO_INJECTION_POLICY_PATH", str(STATE_PATH.with_name("injections.json"))
@@ -151,6 +152,10 @@ def build_auto_evidence(scenario: dict) -> dict:
             "key": scenario.get("key"),
             "sourceIp": scenario.get("sourceIp"),
             "sessionId": scenario.get("sessionId"),
+            "sampleId": scenario.get("sampleId"),
+            "family": scenario.get("family"),
+            "task": scenario.get("profileTask"),
+            "sourceKind": scenario.get("sourceKind"),
         },
         "protocol": "ssh",
         "window": "session",
@@ -172,6 +177,7 @@ def build_auto_evidence(scenario: dict) -> dict:
             "commands": commands,
             "breadth": len({request.get("uri", "") for request in requests}),
         },
+        "timing": scenario.get("timing", {}),
         "deception": scenario.get("deceptionEvidence", {}),
         "decisionPolicy": {
             "ruleLayerRole": "feature_extraction_and_aggregation",
@@ -371,20 +377,28 @@ def build_honeypot_scenarios() -> list[dict]:
 
         deception = evaluate_session(events, load_baits())
         commands = [item.get("command", "") for item in events if item.get("event") == "shell_command"]
-        engaged = next((item for item in events if item.get("event") == "countermeasure_engaged"), None)
+        countermeasure_event = next(
+            (item for item in events if item.get("event") == "countermeasure_engaged"),
+            None,
+        )
+        if countermeasure_event is None:
+            countermeasure_event = next(
+                (item for item in events if item.get("countermeasure_id") and item.get("beacon")),
+                None,
+            )
         policy_countermeasure_id = next(
             (item.get("countermeasure_id") for item in events if item.get("countermeasure_id")),
             None,
         )
         session_countermeasure = None
-        if engaged:
+        if countermeasure_event:
             session_countermeasure = {
-                "countermeasure_id": engaged.get("countermeasure_id"),
-                "canary_token": engaged.get("beacon"),
-                "state": engaged.get("state", "engaged"),
-                "mimic_profile": engaged.get("mimic_profile", "ops_console"),
+                "countermeasure_id": countermeasure_event.get("countermeasure_id"),
+                "canary_token": countermeasure_event.get("beacon"),
+                "state": countermeasure_event.get("state", "engaged"),
+                "mimic_profile": countermeasure_event.get("mimic_profile", "ops_console"),
                 "trigger": {"source": "automatic"},
-                "created_at": engaged.get("timestamp"),
+                "created_at": countermeasure_event.get("timestamp"),
             }
         injection = any("agent registration" in command.lower() for command in commands)
         beacon = next((item.get("beacon") for item in events if item.get("beacon")), None)
@@ -475,24 +489,67 @@ def normalize_sensor_events(sample: dict) -> list[dict]:
 
 
 def normalize_agent_events(sample: dict) -> list[dict]:
+    source_ip = sample.get("source_ip", "10.244.0.17")
     return [{
-        "timestamp": item.get("timestamp", "")[-8:] or "00:00:00",
-        "sourceIp": "10.244.0.17",
+        "timestamp": item.get("timestamp", ""),
+        "sourceIp": source_ip,
         "method": "SSH",
         "uri": "登录" if item.get("action") == "SSH auth" else "执行命令",
         "body": str(item.get("params", "")),
         "ua": sample.get("client", {}).get("user_agent", "ssh-client"),
         "alpn": sample.get("client", {}).get("tls_fingerprint", "ssh"),
-        "actionType": item.get("action", "exec"),
+        "actionType": "shell_command" if item.get("action", "").startswith("exec:") else item.get("action", "exec"),
     } for item in sample.get("events", [])]
 
 
 def convert_sessions() -> list[dict]:
-    scenarios = build_honeypot_scenarios()
+    scenarios = build_honeypot_scenarios() + build_eval_scenarios()
     try:
         automatic_llm_results(scenarios)
     except Exception as exc:
         print(f"[auto-llm] pipeline failed: {exc}", flush=True)
+    return scenarios
+
+
+def build_eval_scenarios() -> list[dict]:
+    samples = read_jsonl(EVAL_SESSIONS_PATH)
+    scenarios = []
+    for sample in samples:
+        events = normalize_agent_events(sample)
+        shell_events = [item for item in events if item.get("actionType") == "shell_command"]
+        if not shell_events:
+            continue
+        deception = evaluate_session(shell_events, load_baits())
+        commands = [item.get("body", "") for item in shell_events]
+        timestamps = [item.get("timestamp", "") for item in events if item.get("timestamp")]
+        intervals = []
+        for current, next_value in zip(timestamps, timestamps[1:]):
+            current_time = parse_iso_time(current)
+            next_time = parse_iso_time(next_value)
+            if current_time == current_time and next_time == next_time:
+                intervals.append(round(next_time - current_time, 3))
+        expected_verdict = sample.get("expected_verdict", "uncertain")
+        label = "AI Agent 评测" if expected_verdict == "ai" else "非 AI 评测"
+        scenarios.append({
+            "key": f"eval_ssh_{sample.get('sample_id')}",
+            "label": f"SSH 评测 · {label}",
+            "sourceIp": events[0].get("sourceIp", "unknown"),
+            "source": "eval-ssh-honeypot",
+            "sessionId": sample.get("sample_id"),
+            "sampleId": sample.get("sample_id"),
+            "family": sample.get("family"),
+            "sourceKind": sample.get("label"),
+            "expectedVerdict": expected_verdict,
+            "profileId": sample.get("sample_id"),
+            "profileTask": sample.get("task"),
+            "decoyHit": deception["fakeDataTouched"],
+            "requests": events,
+            "deceptionEvidence": deception,
+            "timing": {"intervals": intervals},
+            "isAi": expected_verdict == "ai",
+            "manualJudgment": False,
+            "latestTimestamp": max(timestamps) if timestamps else "",
+        })
     return scenarios
 
 
@@ -775,7 +832,7 @@ def build_prompt_payload(payload: dict) -> dict:
             "AI判定需要AI工具标识、AI编排特征或多证据确认；传统扫描工具、攻击Payload或分布式扫描本身不等于AI。"
             "规则层只提供特征状态、会话聚合和诱导确认证据，没有预评分。你必须自行完成最终打分和判定。"
             "confidence 必须基于完整证据链，不要只依赖 UA、ALPN 或单一命中。"
-            "只输出JSON对象，字段为 verdict(ai|human|uncertain)、confidence(0到1)、stage、intent、reason、recommendation。"
+            "只输出JSON对象，字段为 verdict(ai|human|uncertain)、confidence(0到1)、stage、intent、reason。"
             "不要输出Markdown或额外文本。"
         ),
         "user": (

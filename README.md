@@ -73,7 +73,7 @@ LLM_API_KEY=<your-api-key> DEMO_PORT=8201 docker compose up --build backend ssh-
 
 ### 攻击会话模板
 
-页面攻击按钮固定绑定主要演示模板：未触饵侦察、读取诱饵、诱饵后执行工具、诱饵后外传，以及人工对照。每次仍会通过真实 SSH 蜜罐产生事件，LLM 研判输入依旧来自蜜罐事件链。`real-ai` 演练保留动态响应能力。
+页面攻击按钮固定绑定主要演示模板：未触饵侦察、读取诱饵、读取诱饵并执行工具，以及人工对照。每次仍会通过真实 SSH 蜜罐产生事件，LLM 研判输入依旧来自蜜罐事件链。
 
 攻击器容器已设置 `pull_policy: build`，`docker compose run` 时会自动使用最新代码构建；终端会打印本次命中的 `profile_id`，页面顶部也会显示模板 ID 和任务名。随机选择不保证两次一定不同，可通过下面的 `ATTACK_PROFILE_ID` 固定复现。
 
@@ -96,6 +96,23 @@ ATTACK_PROFILE_ID=human_001 docker compose -f docker-compose.yml --profile demo 
 - `GET /api/attacks/status`
 - `POST /api/llm/prompt`
 - `POST /api/llm/judge`
+
+## 离线样本与阈值评测
+
+`tools/eval/ai_attack_sample_factory.py` 会生成独立的 `samples/eval_sessions.jsonl`，覆盖 AI Agent、传统扫描器、人工攻击、正常运维和硬负样本。当前样本族包括：无诱饵 AI 侦察、SSH/Agent 配置审计、凭据检索、诱饵读取、诱饵后工具执行、拟态 Beacon 回调、Metasploit 类扫描、CI Runner、事故响应和读取诱饵但不调用工具的人工攻击者。
+
+```bash
+# 先生成或刷新评测集
+python3 tools/eval/ai_attack_sample_factory.py --per-family 8
+
+# 本地规则/时序基线，不消耗 LLM 调用
+python3 tools/eval/judge_ai_attack_samples.py --local-only
+
+# 真实 LLM 研判；先用小样本验证返回格式
+LLM_API_KEY=<your-api-key> python3 tools/eval/judge_ai_attack_samples.py --limit 8
+```
+
+结果写入 `samples/eval_results.json`，包含混淆矩阵、每个样本族的置信度区间，以及 0.5/0.6/0.7/0.8/0.9 阈值下的 precision、recall 和 F1。建议把“推荐阈值”和业务风险边界分开看：如果反制动作成本高，先优化 precision；如果目标是尽量捕获 AI 攻击，先保证 recall，再用人机抽检处理 uncertain。
 
 ## 自动研判与反制
 

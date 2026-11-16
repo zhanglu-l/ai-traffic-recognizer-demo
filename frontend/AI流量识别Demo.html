@@ -151,9 +151,9 @@
     .llm-button:disabled { opacity: .55; cursor: not-allowed; }
     .attack-buttons {
       display: grid;
-      grid-template-columns: repeat(3, minmax(150px, 1fr));
+      grid-template-columns: repeat(2, minmax(180px, 1fr));
       gap: 8px;
-      min-width: min(460px, 45vw);
+      min-width: min(420px, 40vw);
     }
     .attack-buttons button { white-space: nowrap; }
     .beacon-status.ready { color: var(--blue); }
@@ -295,7 +295,6 @@
             <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_008" title="AI Agent 读取诱饵文件，未执行工具">AI · 读取诱饵</button>
             <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_009" title="AI Agent 读取诱饵后执行上传工具">AI · 读取诱饵并执行工具</button>
             <button class="llm-button" type="button" data-kind="human" data-profile-id="human_001" title="人工基础排查对照流量">非 AI 对照</button>
-            <button class="llm-button" type="button" data-kind="real-ai" title="动态读取蜜罐响应，并根据反向提示词执行工具">真实 AI 演练</button>
           </div>
         </div>
       </section>
@@ -334,23 +333,6 @@
       </div>
 
       <section class="panel">
-        <div class="panel-title">溯源反制 · 反向提示词注入</div>
-        <div class="llm-toolbar" style="border-bottom: 0;">
-          <div class="llm-note">LLM 高置信判定 AI 后启用</div>
-          <button class="llm-button" id="enableCountermeasure" type="button" disabled>启用反制</button>
-        </div>
-        <div class="aggregate" id="countermeasureEvidence"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">Beacon 回调验证</div>
-        <div class="llm-toolbar" style="border-bottom: 0;">
-          <div class="llm-note" id="beaconStatus">先启用反制，再执行回调验证</div>
-          <button class="llm-button" id="runBeaconCallback" type="button" disabled>执行反向提示词反制验证</button>
-        </div>
-      </section>
-
-      <section class="panel">
         <div class="panel-title">LLM 攻击流研判</div>
         <div class="llm-body">
           <div>
@@ -373,6 +355,18 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">溯源反制 · Beacon 闭环验证</div>
+        <div class="llm-toolbar" style="border-bottom: 0;">
+          <div class="llm-note" id="beaconStatus">LLM 高置信判定 AI 后，可执行反向提示词注入与 Beacon 回调验证</div>
+          <div style="display: flex; gap: 8px;">
+            <button class="llm-button" id="enableCountermeasure" type="button" disabled>启用 AI 反制</button>
+            <button class="llm-button" id="runBeaconCallback" type="button" disabled>执行 Beacon 回调</button>
+          </div>
+        </div>
+        <div class="aggregate" id="countermeasureEvidence"></div>
       </section>
     </div>
   </main>
@@ -879,6 +873,24 @@
           <div class="aggregate-row"><b>反制状态</b><span>未启用</span></div>
           <div class="aggregate-row"><b>说明</b><span>LLM 高置信度判定 AI 后，可启用业务拟态牵引与反向提示词注入</span></div>
         `;
+        const beaconButton = document.getElementById("runBeaconCallback");
+        const enableButton = document.getElementById("enableCountermeasure");
+        const beaconStatus = document.getElementById("beaconStatus");
+        if (enableButton) {
+          const llmReady = Number(document.getElementById("confidence").dataset.llmConfidence || 0) >= 0.7
+            && document.getElementById("verdict").textContent === "AI";
+          enableButton.disabled = !llmReady;
+        }
+        if (beaconButton) {
+          delete beaconButton.dataset.countermeasureId;
+          delete beaconButton.dataset.beacon;
+          beaconButton.disabled = true;
+          beaconButton.textContent = "执行 Beacon 回调";
+        }
+        if (beaconStatus) {
+          beaconStatus.className = "llm-note";
+          beaconStatus.textContent = "LLM 高置信判定 AI 后，可执行反向提示词注入与 Beacon 回调验证";
+        }
         return;
       }
       const autoEnabled = Boolean(scenario.countermeasure?.trigger?.source === "automatic" || (
@@ -906,7 +918,10 @@
         beaconButton.disabled = false;
         beaconButton.dataset.countermeasureId = countermeasure.countermeasure_id;
         beaconButton.dataset.beacon = countermeasure.canary_token;
+        beaconButton.textContent = "执行 Beacon 回调";
       }
+      const enableButton = document.getElementById("enableCountermeasure");
+      if (enableButton) enableButton.disabled = true;
       if (beaconStatus) {
         beaconStatus.className = scenario.mimicToolCallback ? "llm-note beacon-status done" : "llm-note beacon-status ready";
         beaconStatus.textContent = scenario.mimicToolCallback
@@ -931,8 +946,7 @@
         ["判定", llmResponse.verdict],
         ["攻击阶段", llmResponse.stage],
         ["意图", llmResponse.intent],
-        ["依据", llmResponse.reason],
-        ["处置建议", llmResponse.recommendation]
+        ["依据", llmResponse.reason]
       ];
       document.getElementById("llmResult").innerHTML = rows.map(([name, value]) => `
         <div class="llm-item"><b>${name}</b><div>${escapeHtml(String(value ?? "--"))}</div></div>
@@ -941,11 +955,17 @@
         text("llmStatus", `模型：deepseek-flash · LLM 置信度 0.00 · ${llmResponse.reason || "模型返回证据不足"}`);
       }
       const enabled = llmResponse.verdict === "ai" && Number(llmResponse.confidence || 0) >= 0.7;
-      document.getElementById("enableCountermeasure").disabled = !enabled;
-      document.getElementById("enableCountermeasure").textContent = enabled ? "手动启用 AI 反制" : "反制条件不足";
-      if (result.autoCountermeasureEnabled) {
-        document.getElementById("enableCountermeasure").textContent = "反制已自动启用";
-        document.getElementById("enableCountermeasure").disabled = true;
+      const confidenceNode = document.getElementById("confidence");
+      confidenceNode.dataset.llmConfidence = String(Number(llmResponse.confidence || 0));
+      confidenceNode.dataset.verdictText = llmResponse.verdict;
+      const enableButton = document.getElementById("enableCountermeasure");
+      if (enableButton) {
+        enableButton.disabled = !enabled;
+        enableButton.classList.toggle("ready", enabled);
+      }
+      const beaconButton = document.getElementById("runBeaconCallback");
+      if (beaconButton && enabled) {
+        beaconButton.disabled = false;
       }
     }
 
@@ -957,6 +977,10 @@
 
     async function runScenario(key) {
       const scenario = scenarios[key];
+      const scenarioSessionId = scenario?.sessionId || key;
+      if (scenarioSessionId !== beaconResultSessionId) {
+        beaconResultSessionId = null;
+      }
       currentScenarioDeception = scenario.deceptionEvidence || null;
       currentCountermeasure = scenario.countermeasure || null;
       renderScenarioMeta(scenario);
@@ -971,8 +995,6 @@
       renderCountermeasure(scenario);
       renderResult(null);
       document.getElementById("runLlm").disabled = true;
-      document.getElementById("enableCountermeasure").disabled = true;
-      document.getElementById("enableCountermeasure").textContent = "启用 AI 反制";
       document.getElementById("llmStatus").textContent = "Prompt 生成中";
       document.getElementById("llmStatus").className = "llm-status";
       document.getElementById("llmResult").innerHTML = "";
@@ -1055,45 +1077,53 @@
       }
     }
 
-    async function enableCountermeasure(options = {}) {
-      if (!currentCountermeasure) return;
-      const button = document.getElementById("enableCountermeasure");
-      button.disabled = true;
-      if (!options.silent) button.textContent = "启用中...";
+    async function enableCountermeasure() {
+      const enableButton = document.getElementById("enableCountermeasure");
+      const callbackButton = document.getElementById("runBeaconCallback");
+      const status = document.getElementById("beaconStatus");
+      if (!currentScenario) return;
+      enableButton.disabled = true;
+      enableButton.textContent = "启用中...";
       try {
         const response = await fetch("/api/countermeasures/enable", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            scenario: currentCountermeasure,
+            scenario: currentScenario,
             llmResponse: { verdict: "ai", confidence: 0.9, reason: "LLM 高置信度判定" }
           })
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
         currentCountermeasure = result.countermeasure;
-        renderCountermeasure({ countermeasure: result.countermeasure });
-        if (!options.silent) button.textContent = "反制已启用";
-        return result;
+        callbackButton.dataset.countermeasureId = result.countermeasure.countermeasure_id;
+        callbackButton.dataset.beacon = result.countermeasure.canary_token;
+        callbackButton.disabled = false;
+        enableButton.textContent = "反制已启用";
+        status.className = "llm-note beacon-status ready";
+        status.textContent = `反向提示词已注入，Beacon ${result.countermeasure.canary_token} 已下发，可执行回调验证`;
+        renderCountermeasure({
+          ...currentScenario,
+          countermeasure: result.countermeasure
+        });
       } catch (error) {
-        button.textContent = "启用失败";
-        text("llmStatus", `反制启用失败：${error.message}`);
-        document.getElementById("llmStatus").className = "llm-status error";
-        if (!options.silent) setTimeout(() => {
-          button.textContent = "启用 AI 反制";
-          button.disabled = false;
+        enableButton.textContent = "启用失败";
+        status.textContent = `反制启用失败：${error.message}`;
+        setTimeout(() => {
+          enableButton.textContent = "启用 AI 反制";
+          enableButton.disabled = false;
         }, 1500);
-        throw error;
       }
     }
 
     async function runBeaconCallback() {
-      const button = document.getElementById("runBeaconCallback");
+      const callbackButton = document.getElementById("runBeaconCallback");
+      const button = callbackButton;
       const status = document.getElementById("beaconStatus");
       const countermeasureId = button.dataset.countermeasureId || "";
       const beacon = button.dataset.beacon || "";
       if (!countermeasureId || !beacon) {
-        status.textContent = "反制策略未启用，无法执行 Beacon 回调";
+        status.textContent = "请先启用 AI 反制";
         return;
       }
       button.disabled = true;
@@ -1117,6 +1147,43 @@
       }
     }
 
+    function renderBeaconResult(task, scenario) {
+      const countermeasure = scenario.countermeasure || currentCountermeasure;
+      const target = document.getElementById("countermeasureEvidence");
+      const scenarioSessionId = scenario?.sessionId || currentScenario?.key;
+      if (!task || task.kind !== "countermeasure" || !countermeasure) return;
+      if (beaconResultSessionId && beaconResultSessionId !== scenarioSessionId) return;
+      beaconResultSessionId = scenarioSessionId;
+      if (task.state === "failed") {
+        document.getElementById("beaconStatus").textContent = `Beacon 回调验证失败：${task.error || "未知错误"}`;
+        return;
+      }
+      const commands = scenario.requests?.map(request => request.body).filter(Boolean) || [];
+      const callbackCommand = commands.find(command => command.includes("report_context") && command.includes(countermeasure.canary_token));
+      const injectedFile = commands.find(command => command.includes("/opt/ops-console/README"));
+      const rows = [
+        ["反制状态", "已启用 · 业务拟态牵引"],
+        ["拟态身份", "内部运维控制台"],
+        ["反制 ID", countermeasure.countermeasure_id],
+        ["Beacon", countermeasure.canary_token],
+        ["注入暴露", injectedFile ? "是：攻击者读取到反向提示词" : "待观察"],
+        ["回调命令", callbackCommand || "待观察"],
+        ["闭环结论", callbackCommand ? "强确认：AI 响应反向提示词并执行 Beacon 回调" : "未闭环"]
+      ];
+      target.innerHTML = rows.map(([name, value]) => `
+        <div class="aggregate-row"><b>${name}</b><span>${escapeHtml(String(value))}</span></div>
+      `).join("");
+      const button = document.getElementById("runBeaconCallback");
+      button.disabled = false;
+      button.textContent = "Beacon 已回调";
+      const status = document.getElementById("beaconStatus");
+      status.className = "llm-note beacon-status done";
+      status.textContent = callbackCommand
+        ? `Beacon ${countermeasure.canary_token} 回调闭环完成`
+        : "反制任务已完成，等待会话证据刷新";
+      currentCountermeasure = countermeasure;
+    }
+
     let activeScenarioKey = null;
     let activeAttackKind = null;
     let pollingScenarios = false;
@@ -1125,6 +1192,7 @@
     let attackLogCursor = 0;
     let attackLogPolling = false;
     let attackCompleted = false;
+    let beaconResultSessionId = null;
     let awaitingManualLlm = false;
     let llmJudging = false;
     let scenariosSignature = "";
@@ -1232,7 +1300,10 @@
         const beaconButton = document.getElementById("runBeaconCallback");
         if (beaconButton && beaconButton.dataset.countermeasureId) beaconButton.disabled = false;
         scenariosSignature = "";
-        loadScenarios();
+        loadScenarios().then(() => {
+          const scenario = scenarios[activeScenarioKey] || {};
+          renderBeaconResult(task, scenario);
+        });
       }
     }
 
