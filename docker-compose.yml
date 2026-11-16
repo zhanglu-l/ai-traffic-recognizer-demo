@@ -39,6 +39,7 @@ services:
     environment:
       HONEYPOT_USERNAME: "${HONEYPOT_USERNAME:-root}"
       HONEYPOT_PASSWORD: "${HONEYPOT_PASSWORD:-admin123456}"
+      AUTO_COUNTERMEASURE: "${AUTO_COUNTERMEASURE:-true}"
       HONEYPOT_INJECTION_PATH: /data/honeypot/injections.json
     ports:
       - "${HONEYPOT_PORT:-2222}:22"

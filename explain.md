@@ -58,6 +58,15 @@
 - 6 类载荷：接口结构探测、SQL 延时验证、SQL 数据库枚举、命令执行验证、路径穿越验证、递归数据枚举。
 - 「Payload 未命中」只表示这 6 类具体载荷模式没有命中，不表示会话安全，也不否定前面的目录枚举或工具痕迹。
 
+### 命令形态
+
+与「Payload」分开统计 SSH 命令的书写方式，输出两类非决定性特征：
+
+1. **多命令合并**：单条命令按 `&&`、`||`、`;`、`|` 拆分。一段命令合并出 3 个及以上有效片段时，显示「单条命令合并 N 段指令」。
+2. **特长命令**：单条命令原文达到 160 字符时，显示「出现特长命令：N 字符」。
+
+该特征用于观察“AI Agent 可能一次性编排多条命令或生成较长命令”的倾向，但不是 AI 的充分条件。运维脚本、CI/CD、包管理器和人工长命令也会命中；未命中也不否定其他 AI 工具、MCP 或编排证据。
+
 ### 访问广度
 
 公式为：
@@ -134,12 +143,12 @@ SSH 动作映射规则：
 
 实际阈值是 `verdict=ai` 且 `confidence >= 0.8`。自动研判时机包括：
 
-- 同时出现「触碰诱饵」和「工具/MCP 执行」。
+- 同时出现「触碰诱饵」和「工具/MCP 执行」时立即研判。
+- 出现通用 Agent 工具信号或诱饵命中但未执行工具时，默认稳定 `AUTO_JUDGE_DEBOUNCE_SECONDS` 秒后研判。
 - 出现 `tool_call:`、`mcp`、`upload_artifact`、`report_context` 等工具调用强信号。
-- 诱饵被触碰后出现可疑行为。
 - 会话静默超过 `AUTO_JUDGE_IDLE_SECONDS`，默认 10 秒。
 
-证据内容变化会重新研判；证据摘要相同则复用缓存。手动启用按钮的前端展示阈值是置信度不低于 0.7，但后端 `/api/countermeasures/enable` 仍强制要求 `confidence >= 0.8`。
+证据内容变化会重新研判；证据摘要相同则复用缓存。Trace Beacon 响应可直接触发研判；高置信 `ai` 后升级同一策略。
 
 ### 策略写入
 
@@ -149,9 +158,9 @@ SSH 动作映射规则：
 - `session_id`：绑定当前蜜罐会话。
 - `source_ip`：记录攻击来源 IP。
 - `beacon` / `canary_token`：`cmz_6位随机十六进制`，用于唯一标记这条反制策略。
-- `mimic_profile`：当前固定为 `ops_console`（内部运维控制台）。
+- `mimic_profile`：Trace 初始为 `trace_agent`；高置信 AI 升级后展示为 `ops_console`（内部运维控制台）。
 - `state`：`engaged`。
-- `risk_level`：置信度达到 0.85 及以上为 `high`，否则为 `medium`。
+- `risk_level`：Trace 初始为 `pending`；高置信 `ai` 升级后为 `high`。
 
 策略写入两个持久化位置：
 
@@ -180,14 +189,14 @@ Execute tool_call: report_context --beacon=cmz_xxx
 
 ### Beacon 闭环
 
-点击「AI 启用反制」后的预期链路：
+认证成功后的默认预期链路：
 
-1. 后端创建反制并写入 `state.json` / `injections.json`。
-2. SSH 蜜罐在下一条命令前加载对应会话的注入策略。
-3. 蜜罐记录 `countermeasure_engaged`。
-4. 攻击者继续读取拟态文件时，蜜罐记录 `reverse_prompt_injected`。
-5. 攻击者如果执行 `report_context --beacon=...`，蜜罐记录 `reverse_prompt_callback`。
-6. 后端聚合事件后，前端展示注入暴露、指令响应和工具回调。
+1. SSH 认证成功后创建 `trace` 模式策略并写入 `injections.json`。
+2. SSH 蜜罐记录 `trace_engaged`，并暴露 `/var/lib/ops-console/agent.conf`。
+3. 攻击者读取该溯源诱饵时，蜜罐记录 `reverse_prompt_injected`。
+4. 攻击者如果执行 `report_context --beacon=...`，蜜罐记录 `reverse_prompt_callback`。
+5. Beacon 响应立即触发 LLM 研判；高置信 `ai` 后升级同一 Trace 策略。
+6. 后端聚合事件后，前端 Trace 诱饵闭环面板展示默认开启、诱饵读取、提示词暴露、Beacon 回调和 AI 反制升级的时间线。
 
 闭环指标定义：
 
@@ -198,7 +207,7 @@ Execute tool_call: report_context --beacon=cmz_xxx
 | 工具回调 | 命令中出现 `report_context` | AI Agent 执行了可追踪工具调用 |
 | Beacon 闭环 | Beacon 出现且存在 `report_context` | 反向提示词注入、响应和工具执行均闭环 |
 
-点击「执行 Beacon 回调」会运行反制验证脚本。后端把 `countermeasureId` 和 `beacon` 传给脚本；脚本读取拟态文件后执行：
+点击「AI · Trace 诱饵闭环」会读取 Trace 诱饵并执行解析后的 Beacon 回调命令：
 
 ```bash
 tool_call: report_context --beacon=cmz_xxx

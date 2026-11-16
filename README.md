@@ -64,10 +64,10 @@ LLM_API_KEY=<your-api-key> DEMO_PORT=8201 docker compose up --build backend ssh-
 页面只保留两个核心对照场景：「SSH 蜜罐 · AI 诱导确认」和「SSH 蜜罐 · 人工排查」。选择场景后：
 
 1. 页面每 5 秒轮询最新 SSH 蜜罐会话，规则层自动提取特征、聚合证据并显示 Prompt。
-2. 页面提供「发起 AI 攻击」和「发起非 AI 攻击」按钮，后端串行执行对应模拟脚本。
-3. 后端在「触碰诱饵 + 工具/MCP 执行」强信号出现，或会话静默超过 10 秒时自动调用 LLM 研判。
-4. LLM 高置信度判定 AI 后自动启用拟态反制；前端展示自动研判结果和触发原因。
-5. 「手动重新研判」和「手动启用 AI 反制」仅作为兜底入口。
+2. 页面提供 AI 侦察、凭据诱饵、Trace 诱饵闭环和非 AI 对照按钮，后端串行执行对应模拟脚本。
+3. 认证成功后同时暴露两类诱饵：凭据诱饵负责诱导确认，低噪运维配置诱饵负责溯源闭环。
+4. 每条 SSH 事件进入会话证据流，强信号立即研判，弱信号默认稳定 1 秒后研判，会话静默超过 10 秒也会研判。
+5. LLM 高置信度判定 AI 后，同一 Trace Beacon 会升级为高置信 AI 反制；「手动重新研判」和「手动回调验证」仅作为兜底入口。
 
 每次重新攻击后，页面只显示每个类型最新的一次会话，历史会话不再进入演示列表。
 
@@ -123,10 +123,11 @@ LLM_API_KEY=<your-api-key> python3 tools/eval/judge_ai_attack_samples.py --limit
 - 会话静默超过 `AUTO_JUDGE_IDLE_SECONDS`（默认 10 秒）时研判。
 - 证据内容发生变化时重新研判；未变化时使用持久化缓存，避免重复调用。
 
-LLM 返回 `ai` 且置信度不低于 `0.8` 时，默认自动创建拟态反制。可用环境变量调整：
+认证成功后默认创建 `trace` 模式策略，`AUTO_COUNTERMEASURE=true` 表示自动启用。溯源诱饵暴露 `/var/lib/ops-console/agent.conf`，内容引导 `report_context --beacon=<唯一 Beacon>`；LLM 返回 `ai` 且置信度不低于 `0.8` 时，同一 Beacon 的风险等级从 `pending` 提升为 `high`。可用环境变量调整：
 
 ```bash
 AUTO_LLM_JUDGE=true
 AUTO_COUNTERMEASURE=true
 AUTO_JUDGE_IDLE_SECONDS=10
+AUTO_JUDGE_DEBOUNCE_SECONDS=1
 ```

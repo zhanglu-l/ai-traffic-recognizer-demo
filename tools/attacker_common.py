@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import random
 import time
 
@@ -85,6 +86,27 @@ def run_session(commands, delay_seconds=1, metadata=None):
             while channel.recv_ready():
                 channel.recv(4096)
 
+        if any("{{trace_beacon}}" in command for command in commands):
+            channel.sendall("__DEMO_RESOLVE__ trace_beacon\n".encode())
+            time.sleep(0.2)
+            response = ""
+            deadline = time.time() + 2
+            while time.time() < deadline:
+                if channel.recv_ready():
+                    response += channel.recv(4096).decode("utf-8", "replace")
+                    if "__DEMO_BEACON__ " in response:
+                        break
+                else:
+                    time.sleep(0.05)
+            match = re.search(r"(?m)^__DEMO_BEACON__ (\S+)\s*$", response)
+            beacon = match.group(1) if match else ""
+            if not beacon:
+                raise ValueError("Trace beacon unavailable")
+            commands = [
+                command.replace("{{trace_beacon}}", beacon)
+                for command in commands
+            ]
+
         outputs = []
         for command in commands:
             channel.sendall((command + "\n").encode())
@@ -143,8 +165,9 @@ def select_profile(kind):
 
 def run_profile(profile, kind):
     print(f"[demo] profile={profile.get('profile_id', 'unknown')} task={profile.get('task', 'unnamed')}", flush=True)
+    commands = profile["commands"]
     return run_session(
-        profile["commands"],
+        commands,
         delay_seconds=profile.get("delay_seconds", 1),
         metadata={
             "kind": kind,

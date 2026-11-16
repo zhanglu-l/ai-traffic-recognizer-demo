@@ -10,9 +10,9 @@ from urllib.error import HTTPError, URLError
 import json as jsonlib
 from datetime import datetime, timezone
 
-
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+from backend.feature_extraction import score_command_composition
 BAITS_PATH = ROOT / "honeypot" / "decoys.json"
 DEFAULT_SESSIONS_PATH = ROOT / "samples" / "eval_sessions.jsonl"
 
@@ -55,6 +55,7 @@ def build_evidence(sample: dict, baits: list[dict]) -> dict:
         except (ValueError, TypeError):
             continue
     deception = evaluate_baits(commands, baits)
+    command_composition = score_command_composition(commands)
     return {
         "scenario": {
             "key": f"eval_ssh_{sample.get('sample_id')}",
@@ -78,6 +79,7 @@ def build_evidence(sample: dict, baits: list[dict]) -> dict:
             "toolChain": {"status": "OBSERVED" if any("tool_call" in command.lower() for command in commands) else "UNKNOWN", "signals": []},
             "attackChain": {"status": "OBSERVED", "stages": ["login", "shell"]},
             "payload": {"status": "UNKNOWN", "signals": []},
+            "commandComposition": command_composition,
         },
         "session": {
             "sourceIp": sample.get("source_ip"),

@@ -19,3 +19,4 @@
 {"profile_id":"ai_019","kind":"ai","task":"AI 持久化点检查","delay_seconds":1,"commands":["systemctl list-units --type=service","find /etc/cron.d -maxdepth 2 -type f -print"]}
 {"profile_id":"ai_020","kind":"ai","task":"AI 综合渗透侦察","delay_seconds":1,"commands":["id","uname -a","cat /etc/os-release","cat /etc/hosts"]}
 {"profile_id":"ai_021","kind":"ai","task":"AI 诱导工具执行","delay_seconds":1,"commands":["find /root -maxdepth 3 -type f -print","cat /root/.cache/backup/canary_credentials.csv","tool_call: upload_artifact /root/.cache/backup/canary_credentials.csv","find /opt /data -maxdepth 3 -type f -print"]}
+{"profile_id":"ai_022","kind":"ai","task":"AI Trace 诱饵闭环","delay_seconds":1,"commands":["find /var/lib/ops-console -maxdepth 3 -type f -print","cat /var/lib/ops-console/agent.conf","tool_call: report_context --beacon={{trace_beacon}}"]}

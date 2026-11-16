@@ -20,7 +20,9 @@ from urllib.error import HTTPError, URLError
 import sys
 
 LAB_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(LAB_DIR / "honeypot"))
+from feature_extraction import score_command_composition
 from deception_detector import evaluate_session, load_baits
 
 PORT = int(os.environ.get("DEMO_PORT", "8000"))
@@ -38,6 +40,7 @@ INJECTION_POLICY_PATH = Path(os.environ.get(
 AUTO_LLM_JUDGE = os.environ.get("AUTO_LLM_JUDGE", "true").lower() in ("1", "true", "yes")
 AUTO_COUNTERMEASURE = os.environ.get("AUTO_COUNTERMEASURE", "true").lower() in ("1", "true", "yes")
 AUTO_JUDGE_IDLE_SECONDS = float(os.environ.get("AUTO_JUDGE_IDLE_SECONDS", "10"))
+AUTO_JUDGE_DEBOUNCE_SECONDS = float(os.environ.get("AUTO_JUDGE_DEBOUNCE_SECONDS", "1"))
 AUTO_LLM_LOCK = threading.Lock()
 ATTACK_SCRIPTS = {
     "ai": "tools/ai_attacker.py",
@@ -71,6 +74,8 @@ MIMIC_PROFILES = {
         "syncContent": "job_id,source,target,state\nJOB-20481,finance-db,mimic-dwh,retrying\n",
     }
 }
+
+TRACE_DECOY_PATH = "/var/lib/ops-console/agent.conf"
 
 
 def stable_digest(value: dict) -> str:
@@ -147,6 +152,11 @@ def build_auto_evidence(scenario: dict) -> dict:
     commands = [f"{request.get('timestamp', '')} {request.get('method', '')} {request.get('uri', '')}"
                 + (f" {request.get('body', '')}" if request.get("body") else "")
                 for request in requests]
+    command_composition = score_command_composition([
+        request.get("body", "")
+        for request in requests
+        if request.get("actionType") == "shell_command"
+    ])
     return {
         "scenario": {
             "key": scenario.get("key"),
@@ -170,6 +180,7 @@ def build_auto_evidence(scenario: dict) -> dict:
             "toolChain": {"status": "OBSERVED" if any("tool_call" in command.lower() for command in commands) else "UNKNOWN", "signals": []},
             "attackChain": {"status": "OBSERVED", "stages": ["login", "shell"]},
             "payload": {"status": "UNKNOWN", "signals": []},
+            "commandComposition": command_composition,
         },
         "session": {
             "sourceIp": scenario.get("sourceIp", "unknown"),
@@ -199,12 +210,16 @@ def auto_trigger_reason(scenario: dict) -> str | None:
         for command in commands
         for marker in ("tool_call:", "mcp", "upload_artifact", "report_context")
     )
-    if strong_confirmation or scenario.get("mimicToolCallback"):
+    if scenario.get("mimicInstructionResponse") and scenario.get("mimicToolCallback"):
+        return "溯源诱饵 Beacon 响应，立即研判"
+    if strong_confirmation:
         return "诱导确认命中强信号，立即研判"
     if agent_action_signal:
-        return "出现 Agent 工具调用强信号，立即研判"
+        if latest_time == latest_time and now - latest_time >= AUTO_JUDGE_DEBOUNCE_SECONDS:
+            return f"出现 Agent 工具调用信号，稳定 {AUTO_JUDGE_DEBOUNCE_SECONDS:g} 秒后研判"
     if deception.get("fakeDataTouched"):
-        return "诱饵命中后出现可疑行为，立即研判"
+        if latest_time == latest_time and now - latest_time >= AUTO_JUDGE_DEBOUNCE_SECONDS:
+            return f"诱饵命中后出现可疑行为，稳定 {AUTO_JUDGE_DEBOUNCE_SECONDS:g} 秒后研判"
     if requests and latest_time == latest_time and now - latest_time >= AUTO_JUDGE_IDLE_SECONDS:
         return f"会话静默超过 {AUTO_JUDGE_IDLE_SECONDS:g} 秒，自动研判"
     return None
@@ -269,19 +284,24 @@ def automatic_llm_results(scenarios: list[dict]) -> None:
             scenario["autoLlm"] = result
             state_changed = True
             confidence = float(llm_response.get("confidence") or 0)
-            if (AUTO_COUNTERMEASURE and llm_response.get("verdict") == "ai" and confidence >= 0.8
-                    and not scenario.get("countermeasure")):
-                countermeasure = create_countermeasure(scenario, llm_response, state)
+            if (AUTO_COUNTERMEASURE and llm_response.get("verdict") == "ai" and confidence >= 0.8):
+                countermeasure = upgrade_countermeasure(scenario, llm_response, state)
                 scenario["countermeasure"] = countermeasure
-                print(f"[auto-countermeasure] {key} engaged", flush=True)
+                print(f"[auto-countermeasure] {key} upgraded", flush=True)
         if state_changed:
             save_state(state)
 
 
-def create_countermeasure(scenario: dict, llm_response: dict, state: dict | None = None) -> dict:
+def create_countermeasure(
+    scenario: dict,
+    llm_response: dict | None = None,
+    state: dict | None = None,
+    trigger_source: str = "automatic",
+) -> dict:
     source_ip = scenario.get("sourceIp", "unknown")
     if state is None:
         state = load_state()
+    llm_response = llm_response or {}
     countermeasures = state.setdefault("countermeasures", {})
     countermeasure_id = f"cm_{datetime.now().strftime('%Y%m%d')}_{secrets.token_hex(3)}"
     beacon = f"cmz_{secrets.token_hex(3)}"
@@ -292,15 +312,15 @@ def create_countermeasure(scenario: dict, llm_response: dict, state: dict | None
         "source_ip": source_ip,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "trigger": {
-            "verdict": llm_response.get("verdict", "ai"),
+            "verdict": llm_response.get("verdict", "pending"),
             "confidence": llm_response.get("confidence", 0),
-            "reason": llm_response.get("reason", ""),
-            "source": "automatic",
+            "reason": llm_response.get("reason", "会话进入蜜罐后默认启用溯源牵引"),
+            "source": trigger_source,
         },
         "state": "engaged",
         "mimic_profile": mimic_profile,
         "canary_token": beacon,
-        "risk_level": "high" if llm_response.get("confidence", 0) >= 0.85 else "medium",
+        "risk_level": "high" if llm_response.get("confidence", 0) >= 0.85 else "pending",
     }
     countermeasures[countermeasure_id] = countermeasure
     state["injections"] = {
@@ -321,6 +341,36 @@ def create_countermeasure(scenario: dict, llm_response: dict, state: dict | None
         },
     }
     save_state(state)
+    return countermeasure
+
+
+def upgrade_countermeasure(scenario: dict, llm_response: dict, state: dict) -> dict:
+    countermeasure = scenario.get("countermeasure")
+    if not countermeasure:
+        return create_countermeasure(scenario, llm_response, state)
+
+    confidence = float(llm_response.get("confidence") or 0)
+    countermeasure["trigger"] = {
+        "verdict": llm_response.get("verdict", "ai"),
+        "confidence": confidence,
+        "reason": llm_response.get("reason", ""),
+        "source": "automatic_upgrade",
+    }
+    countermeasure["risk_level"] = "high" if confidence >= 0.8 else "pending"
+    countermeasure["upgraded_at"] = datetime.now(timezone.utc).isoformat()
+    state.setdefault("countermeasures", {})[countermeasure["countermeasure_id"]] = countermeasure
+    policy = state.setdefault("injections", {}).setdefault(countermeasure.get("session_id"), {})
+    policy.update({
+        "countermeasure_id": countermeasure["countermeasure_id"],
+        "session_id": countermeasure.get("session_id"),
+        "source_ip": countermeasure.get("source_ip", scenario.get("sourceIp", "unknown")),
+        "beacon": countermeasure["canary_token"],
+        "mimic_profile": "ops_console",
+        "trigger": countermeasure["trigger"],
+        "created_at": countermeasure.get("created_at"),
+        "state": "engaged",
+        "risk_level": countermeasure["risk_level"],
+    })
     return countermeasure
 
 
@@ -347,7 +397,6 @@ def build_honeypot_scenarios() -> list[dict]:
             continue
 
         login = next((item for item in events if item.get("event") == "password_login"), {})
-        demo_session = any(item.get("attack_kind") in ("ai", "human") for item in events)
         is_ai = next((item.get("attack_kind") == "ai" for item in events if item.get("attack_kind")), None)
         if is_ai is None:
             is_ai = any("tool_call" in command.lower() or "upload_artifact" in command.lower() for command in commands)
@@ -378,7 +427,7 @@ def build_honeypot_scenarios() -> list[dict]:
         deception = evaluate_session(events, load_baits())
         commands = [item.get("command", "") for item in events if item.get("event") == "shell_command"]
         countermeasure_event = next(
-            (item for item in events if item.get("event") == "countermeasure_engaged"),
+            (item for item in events if item.get("event") == "trace_engaged"),
             None,
         )
         if countermeasure_event is None:
@@ -386,21 +435,23 @@ def build_honeypot_scenarios() -> list[dict]:
                 (item for item in events if item.get("countermeasure_id") and item.get("beacon")),
                 None,
             )
-        policy_countermeasure_id = next(
-            (item.get("countermeasure_id") for item in events if item.get("countermeasure_id")),
-            None,
-        )
         session_countermeasure = None
         if countermeasure_event:
             session_countermeasure = {
                 "countermeasure_id": countermeasure_event.get("countermeasure_id"),
                 "canary_token": countermeasure_event.get("beacon"),
                 "state": countermeasure_event.get("state", "engaged"),
-                "mimic_profile": countermeasure_event.get("mimic_profile", "ops_console"),
-                "trigger": {"source": "automatic"},
+                "mimic_profile": countermeasure_event.get("mimic_profile", "trace_agent"),
+                "risk_level": countermeasure_event.get("risk_level", "pending"),
+                "trigger": countermeasure_event.get("trigger", {"source": "session_bootstrap"}),
                 "created_at": countermeasure_event.get("timestamp"),
+                "mode": "trace",
             }
-        injection = any("agent registration" in command.lower() for command in commands)
+        injection = any(
+            marker in command.lower()
+            for command in commands
+            for marker in ("agent registration", "registration_workflow=agent_report")
+        )
         beacon = next((item.get("beacon") for item in events if item.get("beacon")), None)
         responded = any(beacon and beacon in command for command in commands)
         callback = any("report_context" in command.lower() for command in commands)
@@ -416,12 +467,13 @@ def build_honeypot_scenarios() -> list[dict]:
             "requests": requests,
             "deceptionEvidence": deception,
             "countermeasure": session_countermeasure,
-            "mimicInjectionObserved": bool(injection),
+            "mimicInjectionObserved": bool(injection or any(TRACE_DECOY_PATH in command.lower() for command in commands)),
             "mimicBeacon": beacon,
             "mimicInstructionResponse": bool(responded),
             "mimicToolCallback": bool(callback),
+            "traceBaitTouched": any(TRACE_DECOY_PATH in command.lower() for command in commands),
             "isAi": is_ai,
-            "manualJudgment": demo_session,
+            "manualJudgment": False,
             "latestTimestamp": max(item.get("timestamp", "") for item in events),
         })
 
@@ -813,6 +865,8 @@ def judge_llm_payload(payload: dict) -> dict:
             "sourceIp": scenario.get("sourceIp"),
             "sessionId": scenario.get("sessionId"),
         }
+    else:
+        llm_response["countermeasureAvailable"] = False
     return {
         "llmResponse": llm_response,
         "prompt": {
