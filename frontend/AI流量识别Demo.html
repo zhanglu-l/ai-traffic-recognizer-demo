@@ -105,7 +105,32 @@
       max-height: 220px;
       overflow: auto;
     }
-    .prompt-title { margin-top: 12px; color: var(--muted); font-size: 11px; font-weight: 600; }
+    .prompt-section { margin: 12px 14px 0; border: 1px dashed rgba(36, 56, 76, .9); border-radius: 8px; background: rgba(8, 17, 28, .55); overflow: hidden; }
+    .prompt-section:last-child { margin-bottom: 14px; }
+    .prompt-toggle {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+    }
+    .prompt-toggle:hover { color: var(--blue); }
+    .prompt-section .prompt-box {
+      display: none;
+      margin: 0 10px 10px;
+      max-height: 180px;
+    }
+    .prompt-section.expanded .prompt-box { display: block; }
+    .prompt-section.expanded .prompt-arrow { transform: rotate(90deg); }
+    .prompt-arrow { display: inline-block; transition: transform .16s ease; }
     .terminal-box {
       margin: 0 14px;
       padding: 12px;
@@ -377,12 +402,23 @@
       </div>
 
       <section class="panel">
+        <div class="panel-title">Trace 诱饵闭环</div>
+        <div class="llm-toolbar" style="border-bottom: 0;">
+          <div class="llm-note" id="beaconStatus">已默认开启 · 等待攻击者读取 Trace 诱饵</div>
+        </div>
+        <div class="trace-timeline" id="traceTimeline"></div>
+        <div class="trace-detail" id="traceDetail"></div>
+      </section>
+
+      <section class="panel">
         <div class="panel-title">LLM 攻击流研判</div>
         <div class="llm-body">
-          <div>
-            <div class="prompt-title" style="margin-top: 0;">System Prompt</div>
+          <div class="prompt-section" id="systemPromptSection">
+            <button class="prompt-toggle" id="systemPromptToggle" type="button"><span>System Prompt</span><span class="prompt-arrow">▶</span></button>
             <div class="prompt-box" id="systemPrompt">生成中...</div>
-            <div class="prompt-title">User Prompt</div>
+          </div>
+          <div class="prompt-section" id="userPromptSection">
+            <button class="prompt-toggle" id="userPromptToggle" type="button"><span>User Prompt</span><span class="prompt-arrow">▶</span></button>
             <div class="prompt-box" id="userPrompt">生成中...</div>
           </div>
           <div class="llm-toolbar" style="border: 0; padding: 0;">
@@ -399,15 +435,6 @@
             </div>
           </div>
         </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">Trace 诱饵闭环</div>
-        <div class="llm-toolbar" style="border-bottom: 0;">
-          <div class="llm-note" id="beaconStatus">已默认开启 · 等待攻击者读取 Trace 诱饵</div>
-        </div>
-        <div class="trace-timeline" id="traceTimeline"></div>
-        <div class="trace-detail" id="traceDetail"></div>
       </section>
     </div>
   </main>
@@ -963,7 +990,6 @@
             { name: "诱饵读取", value: "待观察", state: "active" },
             { name: "提示词暴露", value: "待观察", state: "idle" },
             { name: "Beacon 回调", value: "待观察", state: "idle" },
-            { name: "AI 反制升级", value: "待研判", state: "idle" }
           ],
           [["说明", "等待认证后的 Trace 会话事件"]],
           "已默认开启 · 等待攻击者读取 Trace 诱饵",
@@ -981,14 +1007,12 @@
         ["当前状态", pendingJudgment ? "已默认开启 · 观察中" : "已升级 · 业务拟态反制"],
         ["诱饵文件", traceMode ? "/var/lib/ops-console/agent.conf" : "内部运维控制台拟态环境"],
         ["Beacon", countermeasure.canary_token],
-        ["风险等级", countermeasure.risk_level === "high" ? "高" : countermeasure.risk_level === "pending" ? "待研判" : "中"]
       ];
       const states = [
         { name: "默认开启", value: "已开启", state: "done" },
         { name: "诱饵读取", value: scenario.traceBaitTouched || scenario.mimicInjectionObserved ? "已读取" : "待观察", state: scenario.traceBaitTouched || scenario.mimicInjectionObserved ? "done" : "active" },
         { name: "提示词暴露", value: scenario.mimicInjectionObserved ? "已暴露" : "待观察", state: scenario.mimicInjectionObserved ? "done" : scenario.traceBaitTouched ? "active" : "idle" },
         { name: "Beacon 回调", value: scenario.mimicToolCallback ? "已回调" : "待观察", state: scenario.mimicToolCallback ? "done" : scenario.mimicInjectionObserved ? "active" : "idle" },
-        { name: "AI 反制升级", value: upgraded ? "已升级" : "待研判", state: upgraded ? "done" : scenario.mimicToolCallback ? "active" : "idle" }
       ];
       const statusText = upgraded
         ? "LLM 高置信 AI · 已升级业务拟态反制"
@@ -1342,6 +1366,12 @@
     });
     document.getElementById("commandChainToggle").addEventListener("click", () => {
       document.getElementById("commandChain").classList.toggle("expanded");
+    });
+    document.getElementById("systemPromptToggle").addEventListener("click", () => {
+      document.getElementById("systemPromptSection").classList.toggle("expanded");
+    });
+    document.getElementById("userPromptToggle").addEventListener("click", () => {
+      document.getElementById("userPromptSection").classList.toggle("expanded");
     });
     loadScenarios();
   </script>

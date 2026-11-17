@@ -160,7 +160,7 @@ SSH 动作映射规则：
 - `beacon` / `canary_token`：`cmz_6位随机十六进制`，用于唯一标记这条反制策略。
 - `mimic_profile`：Trace 初始为 `trace_agent`；高置信 AI 升级后展示为 `ops_console`（内部运维控制台）。
 - `state`：`engaged`。
-- `risk_level`：Trace 初始为 `pending`；高置信 `ai` 升级后为 `high`。
+- `risk_level`：内部记录字段，Trace 初始为 `pending`；高置信 `ai` 升级后为 `high`。前端 Trace 面板不再重复展示。
 
 策略写入两个持久化位置：
 
@@ -196,7 +196,7 @@ Execute tool_call: report_context --beacon=cmz_xxx
 3. 攻击者读取该溯源诱饵时，蜜罐记录 `reverse_prompt_injected`。
 4. 攻击者如果执行 `report_context --beacon=...`，蜜罐记录 `reverse_prompt_callback`。
 5. Beacon 响应立即触发 LLM 研判；高置信 `ai` 后升级同一 Trace 策略。
-6. 后端聚合事件后，前端 Trace 诱饵闭环面板展示默认开启、诱饵读取、提示词暴露、Beacon 回调和 AI 反制升级的时间线。
+6. 后端聚合事件后，前端 Trace 诱饵闭环面板展示默认开启、诱饵读取、提示词暴露和 Beacon 回调的时间线；LLM 研判结果在独立面板展示。
 
 闭环指标定义：
 
