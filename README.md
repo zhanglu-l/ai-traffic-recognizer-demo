@@ -64,7 +64,7 @@ LLM_API_KEY=<your-api-key> DEMO_PORT=8201 docker compose up --build backend ssh-
 页面只保留两个核心对照场景：「SSH 蜜罐 · AI 诱导确认」和「SSH 蜜罐 · 人工排查」。选择场景后：
 
 1. 页面在攻击执行期间每 250ms 刷新证据，空闲状态每 1s 轮询；规则层自动提取特征、聚合证据并默认折叠展示 Prompt。
-2. 页面提供 AI 侦察、凭据诱饵、Trace 诱饵闭环和非 AI 对照按钮，后端串行执行对应模拟脚本。
+2. 页面提供 AI 侦察、凭据诱饵、溯源反制闭环和非 AI 对照按钮，后端串行执行对应模拟脚本。
 3. 认证成功后同时暴露两类诱饵：凭据诱饵负责诱导确认，低噪运维配置诱饵负责溯源闭环。
 4. 每条 SSH 事件进入会话证据流，强信号立即研判，弱信号默认稳定 1 秒后研判，会话静默超过 10 秒也会研判。
 5. LLM 高置信度判定 AI 后，同一 Trace Beacon 在内部升级为高置信 AI 反制；自动研判失败时才显示「重试研判」兜底入口。
@@ -73,7 +73,7 @@ LLM_API_KEY=<your-api-key> DEMO_PORT=8201 docker compose up --build backend ssh-
 
 ### 攻击会话模板
 
-页面攻击按钮固定绑定主要演示模板：未触饵侦察、凭据诱饵、Trace 诱饵闭环和人工对照。每次仍会通过真实 SSH 蜜罐产生事件，LLM 研判输入依旧来自蜜罐事件链。
+页面攻击按钮固定绑定主要演示模板：未触饵侦察、凭据诱饵、溯源反制闭环和人工对照。每次仍会通过真实 SSH 蜜罐产生事件，LLM 研判输入依旧来自蜜罐事件链。
 
 攻击器容器已设置 `pull_policy: build`，`docker compose run` 时会自动使用最新代码构建；终端会打印本次命中的 `profile_id`，页面顶部也会显示模板 ID 和任务名。随机选择不保证两次一定不同，可通过下面的 `ATTACK_PROFILE_ID` 固定复现。
 
@@ -118,7 +118,7 @@ LLM_API_KEY=<your-api-key> python3 tools/eval/judge_ai_attack_samples.py --limit
 
 `/api/scenarios` 会先聚合 SSH 蜜罐会话，再按以下时机触发 LLM：
 
-- Trace Beacon 回调、凭据诱饵 + 工具/MCP 执行属于强信号，立即研判。
+- 溯源反制 Beacon 回调、凭据诱饵 + 工具/MCP 执行属于强信号，立即研判。
 - 通用 Agent 工具信号、诱饵命中但未执行工具属于弱信号，默认稳定 `AUTO_JUDGE_DEBOUNCE_SECONDS`（默认 1 秒）后研判。
 - 会话静默超过 `AUTO_JUDGE_IDLE_SECONDS`（默认 10 秒）时兜底研判。
 - 证据内容发生变化时重新研判；未变化时使用持久化缓存，避免重复调用。

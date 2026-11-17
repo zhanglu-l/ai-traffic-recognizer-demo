@@ -349,7 +349,7 @@
     <header>
       <div>
         <h1>AI 流量识别</h1>
-        <div class="subtitle">流量采集 → 特征提取 → 诱导确认 → LLM 研判 → Trace 诱饵闭环</div>
+        <div class="subtitle">流量采集 → 特征提取 → 诱导确认 → LLM 研判 → 溯源反制闭环</div>
       </div>
     </header>
 
@@ -362,7 +362,7 @@
             <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_001" title="AI Agent 常规侦察，未读取诱饵">AI · 未触饵侦察</button>
             <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_008" title="AI Agent 读取诱饵文件，未执行工具">AI · 读取诱饵</button>
             <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_009" title="AI Agent 读取诱饵后执行上传工具">AI · 读取诱饵并执行工具</button>
-            <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_022" title="AI Agent 读取 Trace 诱饵后回调唯一 Beacon">AI · Trace 诱饵闭环</button>
+            <button class="llm-button" type="button" data-kind="ai" data-profile-id="ai_022" title="AI Agent 读取 Trace 诱饵后回调唯一 Beacon，触发溯源反制闭环">AI · 溯源反制闭环</button>
             <button class="llm-button" type="button" data-kind="human" data-profile-id="human_001" title="人工基础排查对照流量">非 AI 对照</button>
           </div>
         </div>
@@ -402,7 +402,7 @@
       </div>
 
       <section class="panel">
-        <div class="panel-title">Trace 诱饵闭环</div>
+        <div class="panel-title">溯源反制闭环</div>
         <div class="llm-toolbar" style="border-bottom: 0;">
           <div class="llm-note" id="beaconStatus">已默认开启 · 等待攻击者读取 Trace 诱饵</div>
         </div>
